@@ -22,7 +22,8 @@ The values in `.env.example` illustrate which variables should be set.
 from __future__ import annotations
 
 from functools import lru_cache
-from pydantic import BaseSettings, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

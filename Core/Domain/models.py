@@ -69,6 +69,7 @@ class Target(Base):
     segment_id = Column(Integer, ForeignKey("segments.id"), nullable=False)
     recipient = Column(String(255), nullable=False)
     meta = Column(JSON, nullable=True)
+    uid = Column(String(64), unique=True, nullable=True, index=True)
 
     # Relationship back to segment and events
     segment = relationship("Segment", back_populates="targets")

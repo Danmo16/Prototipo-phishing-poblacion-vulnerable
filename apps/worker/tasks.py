@@ -6,7 +6,12 @@ import uuid
 from sqlalchemy.orm import Session
 
 from apps.worker.celery_app import celery_app
-from channels.email.renderer import render_email_template, write_outbox_html
+from channels.email.renderer import (
+    render_email_subject,
+    render_email_template,
+    write_outbox_email,
+)
+from channels.email.validators import validate_email_template
 from core.db.session import SessionLocal
 from core.domain.models import Campaign, Target, Template, Event
 
@@ -16,8 +21,8 @@ def simulate_send_campaign(campaign_id: int) -> dict:
     """
     Simula el envío de una campaña:
     - genera uid por target si no existe
-    - renderiza el HTML final
-    - guarda el HTML en data/outbox/
+    - renderiza subject y HTML final
+    - guarda HTML y metadatos en data/outbox/
     - registra evento 'delivered'
     """
     db: Session = SessionLocal()
@@ -31,15 +36,32 @@ def simulate_send_campaign(campaign_id: int) -> dict:
         if not tpl:
             return {"ok": False, "error": "Template not found"}
 
+        validation = validate_email_template(
+            html_body=tpl.html_body,
+            subject=tpl.subject,
+        )
+        if not validation["valid"]:
+            return {
+                "ok": False,
+                "error": "Template validation failed",
+                "validation_errors": validation["errors"],
+            }
+
         targets = db.query(Target).filter(Target.segment_id == camp.segment_id).all()
         sent = 0
-        outbox_files: list[str] = []
+        outbox_files: list[dict[str, str]] = []
 
         for target in targets:
             if not target.uid:
                 target.uid = str(uuid.uuid4())
                 db.add(target)
                 db.flush()
+
+            rendered_subject = render_email_subject(
+                subject=tpl.subject,
+                recipient=target.recipient,
+                uid=target.uid,
+            )
 
             rendered_html = render_email_template(
                 html_body=tpl.html_body,
@@ -50,12 +72,14 @@ def simulate_send_campaign(campaign_id: int) -> dict:
                 template_id=tpl.id,
             )
 
-            file_path = write_outbox_html(
+            outbox_info = write_outbox_email(
                 campaign_id=camp.id,
                 target_id=target.id,
+                recipient=target.recipient,
+                subject=rendered_subject,
                 html_content=rendered_html,
             )
-            outbox_files.append(file_path)
+            outbox_files.append(outbox_info)
 
             ev = Event(
                 campaign_id=camp.id,
@@ -66,7 +90,9 @@ def simulate_send_campaign(campaign_id: int) -> dict:
                 meta={
                     "uid": target.uid,
                     "mode": "simulated_outbox",
-                    "outbox_file": file_path,
+                    "subject": rendered_subject,
+                    "html_file": outbox_info["html_file"],
+                    "meta_file": outbox_info["meta_file"],
                 },
             )
             db.add(ev)

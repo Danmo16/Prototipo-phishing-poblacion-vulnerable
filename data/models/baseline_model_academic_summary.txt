@@ -1,0 +1,22 @@
+Resumen académico del modelo baseline (Regresión Logística)
+======================================================================
+
+Modo de entrenamiento: train_only_small_sample
+Número de observaciones: 9
+Accuracy: 0.6666666666666666
+Precision: 0.5
+Recall: 1.0
+F1-score: 0.6666666666666666
+ROC-AUC: 0.75
+
+Variables con mayor peso absoluto en el modelo:
+
+- num__signal_authority: coef=-0.585054 | abs=0.585054
+- num__signal_personalization: coef=-0.585054 | abs=0.585054
+- cat__age_bracket_18-24: coef=0.000116 | abs=0.000116
+- cat__gender_unknown: coef=0.000116 | abs=0.000116
+- cat__education_Universitaria: coef=0.000116 | abs=0.000116
+- num__signal_urgency: coef=0.000000 | abs=0.000000
+- num__signal_reward: coef=0.000000 | abs=0.000000
+
+Interpretación sugerida: los coeficientes positivos se asocian a una mayor probabilidad estimada de clic, mientras que los coeficientes negativos se asocian a una menor probabilidad, manteniendo constantes las demás variables.

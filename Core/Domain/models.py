@@ -1,22 +1,9 @@
-"""SQLAlchemy ORM models for the phishing prototype.
-
-These classes map the conceptual entities of the system—campaigns,
-templates, segments, targets and events—to relational database tables.
-Using SQLAlchemy's declarative ORM allows us to keep the Python
-representations and the database schema in sync while still writing
-idiomatic Python code. Relationships between entities are declared via
-foreign keys and SQLAlchemy's relationship function.
-
-Note: you can switch primary key types (e.g., to UUIDs) if needed, but
-integers suffice for the initial prototype. Default values and
-timestamps are defined at the model level.
-"""
-
+# core/domain/models.py
 from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import declarative_base, relationship
 
 
@@ -31,11 +18,12 @@ class Template(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     channel = Column(String(50), nullable=False)
     name = Column(String(200), nullable=False)
-    html_body = Column(String, nullable=False)
+    subject = Column(String(255), nullable=True)
+    description = Column(Text, nullable=True)
+    html_body = Column(Text, nullable=False)
     signals = Column(JSON, nullable=True)
     version = Column(Integer, default=1, nullable=False)
 
-    # Relationship backref to campaigns
     campaigns = relationship("Campaign", back_populates="template", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -52,7 +40,6 @@ class Segment(Base):
     gender = Column(String(50))
     education = Column(String(50))
 
-    # Relationship to targets and campaigns
     targets = relationship("Target", back_populates="segment", cascade="all, delete-orphan")
     campaigns = relationship("Campaign", back_populates="segment", cascade="all, delete-orphan")
 
@@ -68,10 +55,9 @@ class Target(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     segment_id = Column(Integer, ForeignKey("segments.id"), nullable=False)
     recipient = Column(String(255), nullable=False)
-    meta = Column(JSON, nullable=True)
     uid = Column(String(64), unique=True, nullable=True, index=True)
+    meta = Column(JSON, nullable=True)
 
-    # Relationship back to segment and events
     segment = relationship("Segment", back_populates="targets")
     events = relationship("Event", back_populates="target", cascade="all, delete-orphan")
 
@@ -91,7 +77,6 @@ class Campaign(Base):
     template_id = Column(Integer, ForeignKey("templates.id"), nullable=False)
     segment_id = Column(Integer, ForeignKey("segments.id"), nullable=False)
 
-    # Relationships to template, segment, and events
     template = relationship("Template", back_populates="campaigns")
     segment = relationship("Segment", back_populates="campaigns")
     events = relationship("Event", back_populates="campaign", cascade="all, delete-orphan")
@@ -113,7 +98,6 @@ class Event(Base):
     occurred_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     meta = Column(JSON, nullable=True)
 
-    # Relationships back to campaign, target, and template
     campaign = relationship("Campaign", back_populates="events")
     target = relationship("Target", back_populates="events")
     template = relationship("Template")

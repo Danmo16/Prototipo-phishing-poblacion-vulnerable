@@ -7,6 +7,19 @@ from jinja2 import Template as JinjaTemplate
 from core.config.settings import settings
 
 
+def render_email_subject(subject: str | None, recipient: str, uid: str) -> str:
+    """
+    Render a subject safely with Jinja2 if variables are used.
+    """
+    subject = subject or "Simulación académica"
+    template = JinjaTemplate(subject)
+    return template.render(
+        recipient=recipient,
+        name=recipient,
+        uid=uid,
+    )
+
+
 def render_email_template(
     html_body: str,
     uid: str,
@@ -16,7 +29,7 @@ def render_email_template(
     template_id: int,
 ) -> str:
     """
-    Renderiza la plantilla HTML final para un target específico.
+    Render the final HTML email content for a specific target.
     """
 
     tracking_dot = f"{settings.tracker_base_url}/open.gif?uid={uid}"
@@ -37,18 +50,38 @@ def render_email_template(
     return rendered
 
 
-def write_outbox_html(
+def write_outbox_email(
     campaign_id: int,
     target_id: int,
+    recipient: str,
+    subject: str,
     html_content: str,
-) -> str:
+) -> dict[str, str]:
     """
-    Guarda el HTML renderizado en data/outbox/ para abrirlo manualmente.
-    Devuelve la ruta absoluta del archivo creado.
+    Save a simulated email delivery into the outbox folder.
+
+    Creates:
+    - one .html file for browser preview
+    - one .txt metadata file for evidence / traceability
     """
     outbox_dir = Path(settings.outbox_dir)
     outbox_dir.mkdir(parents=True, exist_ok=True)
 
-    file_path = outbox_dir / f"campaign_{campaign_id}_target_{target_id}.html"
-    file_path.write_text(html_content, encoding="utf-8")
-    return str(file_path.resolve())
+    html_path = outbox_dir / f"campaign_{campaign_id}_target_{target_id}.html"
+    meta_path = outbox_dir / f"campaign_{campaign_id}_target_{target_id}.txt"
+
+    html_path.write_text(html_content, encoding="utf-8")
+
+    meta_text = (
+        f"campaign_id: {campaign_id}\n"
+        f"target_id: {target_id}\n"
+        f"recipient: {recipient}\n"
+        f"subject: {subject}\n"
+        f"html_file: {html_path.name}\n"
+    )
+    meta_path.write_text(meta_text, encoding="utf-8")
+
+    return {
+        "html_file": str(html_path.resolve()),
+        "meta_file": str(meta_path.resolve()),
+    }

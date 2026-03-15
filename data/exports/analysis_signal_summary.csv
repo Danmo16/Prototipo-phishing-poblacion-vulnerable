@@ -1,0 +1,5 @@
+signal,rows_with_signal,delivered_with_signal,opened_with_signal,clicked_with_signal,open_rate_with_signal_pct,click_rate_with_signal_pct,rows_without_signal,delivered_without_signal,opened_without_signal,clicked_without_signal,open_rate_without_signal_pct,click_rate_without_signal_pct
+signal_urgency,0,0,0,0,0.0,0.0,9,14,3,3,21.43,21.43
+signal_authority,3,3,0,0,0.0,0.0,6,11,3,3,27.27,27.27
+signal_reward,0,0,0,0,0.0,0.0,9,14,3,3,21.43,21.43
+signal_personalization,3,3,0,0,0.0,0.0,6,11,3,3,27.27,27.27

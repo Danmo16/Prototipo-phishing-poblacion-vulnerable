@@ -1,0 +1,5 @@
+campaign_id: 3
+target_id: 3
+recipient: daniels.a.m.m1234@gmail.com
+subject: Notificación de seguridad para daniels.a.m.m1234@gmail.com
+html_file: campaign_3_target_3.html

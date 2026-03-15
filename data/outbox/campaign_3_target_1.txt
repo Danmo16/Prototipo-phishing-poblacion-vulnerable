@@ -1,0 +1,5 @@
+campaign_id: 3
+target_id: 1
+recipient: test1@example.com
+subject: Notificación de seguridad para test1@example.com
+html_file: campaign_3_target_1.html

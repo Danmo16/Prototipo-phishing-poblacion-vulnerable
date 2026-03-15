@@ -16,4 +16,8 @@ celery_app.conf.update(
     enable_utc=True,
 )
 
-import apps.worker.tasks
+celery_app.conf.worker_pool = "solo"
+celery_app.conf.worker_concurrency = 1
+celery_app.conf.broker_connection_retry_on_startup = True
+
+import apps.worker.tasks  # noqa: F401

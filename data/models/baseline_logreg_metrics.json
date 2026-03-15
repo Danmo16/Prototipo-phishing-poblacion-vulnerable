@@ -1,0 +1,20 @@
+{
+  "mode": "train_only_small_sample",
+  "n_rows": 9,
+  "clicked_positive_cases": 3,
+  "accuracy": 0.6666666666666666,
+  "precision": 0.5,
+  "recall": 1.0,
+  "f1": 0.6666666666666666,
+  "roc_auc": 0.75,
+  "confusion_matrix": [
+    [
+      3,
+      3
+    ],
+    [
+      0,
+      3
+    ]
+  ]
+}

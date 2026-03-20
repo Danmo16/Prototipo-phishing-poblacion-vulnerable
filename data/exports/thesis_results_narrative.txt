@@ -1,0 +1,14 @@
+Redacción sugerida para el capítulo de resultados
+========================================================================
+
+Durante la ejecución del prototipo se consolidaron 12 observaciones, distribuidas en 4 campañas y 3 targets únicos. En total se registraron 14 entregas, 3 aperturas y 3 clics.
+
+La tasa global de apertura alcanzó 21.43% y la tasa global de clic fue de 21.43%, lo cual permite evidenciar que el prototipo ya cuenta con capacidad para capturar y estructurar las interacciones de los usuarios frente a campañas simuladas.
+
+Al analizar el comportamiento por campaña, se identificó que la campaña 1 presentó la mayor tasa de clic (37.5%), lo que la ubica como la campaña de mayor respuesta entre las observadas en este corte.
+
+Desde el enfoque demográfico, el segmento 1 (edad: 18-24, género: nan, educación: Universitaria) mostró la mayor tasa de clic (21.43%), sugiriendo una mayor susceptibilidad relativa dentro de los segmentos evaluados.
+
+En relación con las señales de las plantillas, la señal Urgencia mostró la mayor tasa de clic cuando estuvo presente (0.0%), lo que sugiere que este disparador podría tener una mayor capacidad de influencia sobre el comportamiento del usuario.
+
+Aunque estos resultados corresponden a una fase preliminar del prototipo, constituyen una base relevante para la identificación de patrones iniciales de vulnerabilidad y para el ajuste del diseño experimental antes de realizar pruebas en escenarios más amplios.

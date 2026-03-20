@@ -29,6 +29,59 @@ def get_db() -> Session:
 def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
     return df.to_csv(index=False).encode("utf-8")
 
+def build_general_descriptive_df(analytic_df: pd.DataFrame) -> pd.DataFrame:
+    if analytic_df.empty:
+        return pd.DataFrame()
+
+    delivered = int(analytic_df["delivered"].sum())
+    opened = int(analytic_df["opened_flag"].sum())
+    clicked = int(analytic_df["clicked_flag"].sum())
+
+    rows = [
+        {"indicador": "Total de observaciones", "valor": len(analytic_df)},
+        {"indicador": "Total de campañas", "valor": analytic_df["campaign_id"].nunique()},
+        {"indicador": "Total de targets", "valor": analytic_df["target_id"].nunique()},
+        {"indicador": "Total de segmentos", "valor": analytic_df["segment_id"].nunique()},
+        {"indicador": "Total de plantillas", "valor": analytic_df["template_id"].nunique()},
+        {"indicador": "Correos entregados", "valor": delivered},
+        {"indicador": "Aperturas registradas", "valor": opened},
+        {"indicador": "Clics registrados", "valor": clicked},
+        {"indicador": "Tasa de apertura (%)", "valor": safe_rate(opened, delivered)},
+        {"indicador": "Tasa de clic (%)", "valor": safe_rate(clicked, delivered)},
+    ]
+    return pd.DataFrame(rows)
+
+def load_model_comparison_df() -> pd.DataFrame:
+    model_dir = Path("data/models")
+    path = model_dir / "model_comparison_metrics.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_logreg_coefficients_df() -> pd.DataFrame:
+    model_dir = Path("data/models")
+    path = model_dir / "logreg_coefficients.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_tree_importances_df() -> pd.DataFrame:
+    model_dir = Path("data/models")
+    path = model_dir / "decision_tree_importances.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_model_predictions_df() -> pd.DataFrame:
+    model_dir = Path("data/models")
+    path = model_dir / "model_predictions.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
 def load_model_metrics() -> dict | None:
     model_dir = Path("data/models")
     metrics_path = model_dir / "baseline_logreg_metrics.json"
@@ -283,6 +336,11 @@ def main():
         model_metrics = load_model_metrics()
         model_coef_df = load_model_coefficients_df()
         model_pred_df = load_model_predictions_df()
+        model_comparison_df = load_model_comparison_df()
+        logreg_coef_df = load_logreg_coefficients_df()
+        tree_imp_df = load_tree_importances_df()
+        model_pred_df = load_model_predictions_df()
+        descriptive_general_df = build_general_descriptive_df(analytic_df)
 
         tab1, tab2 = st.tabs(["Operativo", "Analítico"])
 
@@ -314,6 +372,46 @@ def main():
                 )
 
         with tab2:
+
+            st.subheader("Análisis descriptivo formal")
+            if descriptive_general_df.empty:
+                st.info("No hay datos suficientes para el resumen descriptivo.")
+            else:
+                st.dataframe(descriptive_general_df, use_container_width=True)
+                st.download_button(
+                    "Descargar tabla descriptiva general (CSV)",
+                    dataframe_to_csv_bytes(descriptive_general_df),
+                    "descriptive_general_table_dashboard.csv",
+                    "text/csv",
+                )
+
+                st.markdown("#### Comentario interpretativo")
+                delivered_val = descriptive_general_df.loc[
+                    descriptive_general_df["indicador"] == "Correos entregados", "valor"
+                ].iloc[0]
+                opened_val = descriptive_general_df.loc[
+                    descriptive_general_df["indicador"] == "Aperturas registradas", "valor"
+                ].iloc[0]
+                clicked_val = descriptive_general_df.loc[
+                    descriptive_general_df["indicador"] == "Clics registrados", "valor"
+                ].iloc[0]
+                open_rate_val = descriptive_general_df.loc[
+                    descriptive_general_df["indicador"] == "Tasa de apertura (%)", "valor"
+                ].iloc[0]
+                click_rate_val = descriptive_general_df.loc[
+                    descriptive_general_df["indicador"] == "Tasa de clic (%)", "valor"
+                ].iloc[0]
+
+                st.write(
+                    f"En este corte se observaron {delivered_val} entregas, "
+                    f"{opened_val} aperturas y {clicked_val} clics. "
+                    f"La tasa de apertura fue de {open_rate_val}% y la tasa de clic fue de "
+                    f"{click_rate_val}%, lo que permite caracterizar preliminarmente "
+                    f"la respuesta de los usuarios ante las campañas simuladas."
+                )
+
+            st.divider()
+        
             st.subheader("Resumen por campaña")
             if campaign_df.empty:
                 st.info("No hay datos para campañas.")
@@ -417,6 +515,53 @@ def main():
                         "Descargar predicciones del modelo (CSV)",
                         dataframe_to_csv_bytes(model_pred_df),
                         "baseline_logreg_predictions.csv",
+                        "text/csv",
+                    )
+
+            st.divider()
+            st.subheader("Comparación de modelos")
+
+            if model_comparison_df.empty:
+                st.info(
+                    "Aún no hay comparación de modelos. Ejecuta:\n"
+                    "python -m scripts.compare_models"
+                )
+            else:
+                st.dataframe(model_comparison_df, use_container_width=True)
+                st.download_button(
+                    "Descargar métricas comparativas (CSV)",
+                    dataframe_to_csv_bytes(model_comparison_df),
+                    "model_comparison_metrics.csv",
+                    "text/csv",
+                )
+
+                st.markdown("#### Coeficientes - Regresión Logística")
+                if not logreg_coef_df.empty:
+                    st.dataframe(logreg_coef_df.head(20), use_container_width=True)
+                    st.download_button(
+                        "Descargar coeficientes logística (CSV)",
+                        dataframe_to_csv_bytes(logreg_coef_df),
+                        "logreg_coefficients.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Importancias - Árbol de decisión")
+                if not tree_imp_df.empty:
+                    st.dataframe(tree_imp_df.head(20), use_container_width=True)
+                    st.download_button(
+                        "Descargar importancias árbol (CSV)",
+                        dataframe_to_csv_bytes(tree_imp_df),
+                        "decision_tree_importances.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Predicciones de modelos")
+                if not model_pred_df.empty:
+                    st.dataframe(model_pred_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar predicciones de modelos (CSV)",
+                        dataframe_to_csv_bytes(model_pred_df),
+                        "model_predictions.csv",
                         "text/csv",
                     )
 

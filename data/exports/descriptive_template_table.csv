@@ -1,0 +1,3 @@
+template_id,template_name,template_subject,template_description,signal_urgency,signal_authority,signal_reward,signal_personalization,delivered,opened,clicked,tasa_apertura_pct,tasa_clic_pct
+1,Template educativo v1,,,0,0,0,0,11,3,3,27.27,27.27
+4,Template educativo formal,Notificación de seguridad para {{ name }},Plantilla base para simulación académica con seguimiento de apertura y clic.,0,1,0,1,3,0,0,0.0,0.0

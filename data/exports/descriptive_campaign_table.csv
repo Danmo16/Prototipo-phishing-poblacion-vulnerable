@@ -1,5 +1,5 @@
 campaign_id,campaign_status,campaign_channel,segment_id,template_id,observaciones,delivered,opened,clicked,tasa_apertura_pct,tasa_clic_pct
 1,launched,email,1,1,3,8,3,3,37.5,37.5
 2,launched,email,1,1,3,3,0,0,0.0,0.0
-3,launched,email,1,4,3,3,0,0,0.0,0.0
+3,launched,email,1,4,3,3,1,1,33.33,33.33
 4,draft,email,1,1,3,0,0,0,0.0,0.0

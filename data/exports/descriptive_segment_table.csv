@@ -1,2 +1,2 @@
 segment_id,age_bracket,gender,education,targets,delivered,opened,clicked,tasa_apertura_pct,tasa_clic_pct
-1,18-24,,Universitaria,3,14,3,3,21.43,21.43
+1,18-24,,Universitaria,3,14,4,4,28.57,28.57

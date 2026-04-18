@@ -1,0 +1,8 @@
+feature,coefficient,abs_coefficient
+num__signal_authority,0.412199508288003,0.412199508288003
+num__signal_personalization,0.412199508288003,0.412199508288003
+cat__age_bracket_18-24,-8.074673870249374e-06,8.074673870249374e-06
+cat__gender_unknown,-8.074673870249374e-06,8.074673870249374e-06
+cat__education_Universitaria,-8.074673870249374e-06,8.074673870249374e-06
+num__signal_urgency,0.0,0.0
+num__signal_reward,0.0,0.0

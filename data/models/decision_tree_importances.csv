@@ -1,0 +1,8 @@
+feature,importance
+num__signal_urgency,0.0
+num__signal_authority,0.0
+num__signal_reward,0.0
+num__signal_personalization,0.0
+cat__age_bracket_18-24,0.0
+cat__gender_unknown,0.0
+cat__education_Universitaria,0.0

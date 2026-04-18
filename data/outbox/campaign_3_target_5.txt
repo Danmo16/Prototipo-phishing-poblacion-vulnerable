@@ -1,0 +1,5 @@
+campaign_id: 3
+target_id: 5
+recipient: seg2_user2@example.com
+subject: Beneficio disponible para seg2_user2@example.com
+html_file: campaign_3_target_5.html

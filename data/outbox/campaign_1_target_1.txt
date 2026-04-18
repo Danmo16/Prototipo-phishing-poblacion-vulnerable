@@ -1,0 +1,5 @@
+campaign_id: 1
+target_id: 1
+recipient: seg1_user1@example.com
+subject: Acción requerida de inmediato para seg1_user1@example.com
+html_file: campaign_1_target_1.html

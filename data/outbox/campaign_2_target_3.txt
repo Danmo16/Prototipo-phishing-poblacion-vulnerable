@@ -1,0 +1,5 @@
+campaign_id: 2
+target_id: 3
+recipient: seg1_user3@example.com
+subject: Comunicado institucional para seg1_user3@example.com
+html_file: campaign_2_target_3.html

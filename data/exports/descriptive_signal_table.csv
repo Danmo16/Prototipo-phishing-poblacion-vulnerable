@@ -1,5 +1,5 @@
 senal,observaciones_con_senal,delivered_con_senal,opened_con_senal,clicked_con_senal,tasa_apertura_con_senal_pct,tasa_clic_con_senal_pct,observaciones_sin_senal,delivered_sin_senal,opened_sin_senal,clicked_sin_senal,tasa_apertura_sin_senal_pct,tasa_clic_sin_senal_pct
-Urgencia,0,0,0,0,0.0,0.0,12,14,3,3,21.43,21.43
-Autoridad,3,3,0,0,0.0,0.0,9,11,3,3,27.27,27.27
-Recompensa,0,0,0,0,0.0,0.0,12,14,3,3,21.43,21.43
-Personalización,3,3,0,0,0.0,0.0,9,11,3,3,27.27,27.27
+Urgencia,0,0,0,0,0.0,0.0,12,14,4,4,28.57,28.57
+Autoridad,3,3,1,1,33.33,33.33,9,11,3,3,27.27,27.27
+Recompensa,0,0,0,0,0.0,0.0,12,14,4,4,28.57,28.57
+Personalización,3,3,1,1,33.33,33.33,9,11,3,3,27.27,27.27

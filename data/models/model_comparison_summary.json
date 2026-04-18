@@ -1,0 +1,10 @@
+{
+  "n_rows_total": 12,
+  "n_train": 8,
+  "n_test": 4,
+  "positive_cases_total": 4,
+  "models_compared": [
+    "logistic_regression",
+    "decision_tree"
+  ]
+}

@@ -1,0 +1,5 @@
+campaign_id: 4
+target_id: 9
+recipient: seg3_user3@example.com
+subject: Actualización importante para seg3_user3@example.com
+html_file: campaign_4_target_9.html

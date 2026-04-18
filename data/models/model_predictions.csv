@@ -1,0 +1,9 @@
+signal_urgency,signal_authority,signal_reward,signal_personalization,age_bracket,gender,education,y_true,y_pred,y_prob,model
+0,0,0,0,18-24,unknown,Universitaria,1,0,0.4204978654302151,logistic_regression
+0,0,0,0,18-24,unknown,Universitaria,0,0,0.4204978654302151,logistic_regression
+0,1,0,1,18-24,unknown,Universitaria,0,1,0.8977084587582672,logistic_regression
+0,1,0,1,18-24,unknown,Universitaria,0,1,0.8977084587582672,logistic_regression
+0,0,0,0,18-24,unknown,Universitaria,1,0,0.5000000000000001,decision_tree
+0,0,0,0,18-24,unknown,Universitaria,0,0,0.5000000000000001,decision_tree
+0,1,0,1,18-24,unknown,Universitaria,0,0,0.5000000000000001,decision_tree
+0,1,0,1,18-24,unknown,Universitaria,0,0,0.5000000000000001,decision_tree

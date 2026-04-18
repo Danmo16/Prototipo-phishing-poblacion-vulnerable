@@ -1,12 +1,12 @@
 Análisis estadístico descriptivo formal
 ========================================================================
 
-En el corte analizado se registraron 12 observaciones, correspondientes a 4 campañas y 3 targets únicos. La tasa global de apertura fue de 21.43% y la tasa global de clic fue de 21.43%.
+En el corte analizado se registraron 12 observaciones, correspondientes a 4 campañas y 3 targets únicos. La tasa global de apertura fue de 28.57% y la tasa global de clic fue de 28.57%.
 
 La campaña con mayor tasa de clic fue la campaña 1, con una tasa de clic de 37.5% y una tasa de apertura de 37.5%.
 
-Desde la perspectiva demográfica, el segmento con mayor tasa de clic fue el segmento 1 (edad: 18-24, género: nan, educación: Universitaria), con una tasa de clic de 21.43%.
+Desde la perspectiva demográfica, el segmento con mayor tasa de clic fue el segmento 1 (edad: 18-24, género: nan, educación: Universitaria), con una tasa de clic de 28.57%.
 
-En cuanto a las señales del mensaje, la señal con mayor tasa de clic cuando estuvo activa fue Urgencia, alcanzando una tasa de clic de 0.0%.
+En cuanto a las señales del mensaje, la señal con mayor tasa de clic cuando estuvo activa fue Autoridad, alcanzando una tasa de clic de 33.33%.
 
 Estos resultados deben interpretarse como evidencia descriptiva preliminar. A medida que se incorporen nuevas observaciones y campañas, será posible fortalecer la estabilidad de las tasas y realizar análisis comparativos más robustos.

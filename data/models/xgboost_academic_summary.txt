@@ -1,0 +1,24 @@
+Resumen académico del modelo XGBoost
+======================================================================
+
+Observaciones totales: 12
+Observaciones de entrenamiento: 8
+Observaciones de prueba: 4
+Casos positivos totales: 4
+Accuracy: 0.75
+Precision: 0.0
+Recall: 0.0
+F1-score: 0.0
+ROC-AUC: 0.5
+
+Variables con mayor importancia en XGBoost:
+
+- num__signal_urgency: importance=0.000000
+- num__signal_authority: importance=0.000000
+- num__signal_reward: importance=0.000000
+- num__signal_personalization: importance=0.000000
+- cat__age_bracket_18-24: importance=0.000000
+- cat__gender_unknown: importance=0.000000
+- cat__education_Universitaria: importance=0.000000
+
+Interpretación sugerida: XGBoost permite estimar la probabilidad de clic a partir de variables demográficas y señales del mensaje, identificando qué características contribuyen con mayor peso relativo dentro del modelo.

@@ -3,18 +3,24 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+
 class CampaignCreate(BaseModel):
     channel: str = "email"
     template_id: int
     segment_id: int
 
-class CampaignOut(BaseModel):
+
+class CampaignOut(CampaignCreate):
     id: int
-    channel: str
-    template_id: int
-    segment_id: int
-    status: str
     launched_at: Optional[datetime] = None
+    status: str
 
     class Config:
         from_attributes = True
+
+
+class CampaignLaunchOut(BaseModel):
+    ok: bool
+    message: str
+    campaign_id: int
+    task_id: str

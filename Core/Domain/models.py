@@ -3,11 +3,29 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Text
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, JSON, Text
 from sqlalchemy.orm import declarative_base, relationship
 
 
 Base = declarative_base()
+
+
+class User(Base):
+    """Represents an API user authenticated via JWT."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    full_name = Column(String(255), nullable=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False, default="analyst")
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<User id={self.id!r} username={self.username!r} role={self.role!r}>"
 
 
 class Template(Base):

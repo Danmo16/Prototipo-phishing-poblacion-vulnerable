@@ -26,3 +26,8 @@ pyarrow==17.0.0
 joblib==1.4.2
 matplotlib==3.9.2
 xgboost
+python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+python-multipart
+email-validator
+bcrypt==4.0.1

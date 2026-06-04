@@ -8,9 +8,6 @@ from core.config.settings import settings
 
 
 def render_email_subject(subject: str | None, recipient: str, uid: str) -> str:
-    """
-    Render a subject safely with Jinja2 if variables are used.
-    """
     subject = subject or "Simulación académica"
     template = JinjaTemplate(subject)
     return template.render(
@@ -28,12 +25,9 @@ def render_email_template(
     target_id: int,
     template_id: int,
 ) -> str:
-    """
-    Render the final HTML email content for a specific target.
-    """
-
     tracking_dot = f"{settings.tracker_base_url}/open.gif?uid={uid}"
     landing_url = f"{settings.tracker_base_url}/r?uid={uid}"
+    report_url = f"{settings.tracker_base_url}/report?uid={uid}"
 
     template = JinjaTemplate(html_body)
 
@@ -46,6 +40,7 @@ def render_email_template(
         template_id=template_id,
         tracking_dot=tracking_dot,
         landing_url=landing_url,
+        report_url=report_url,
     )
     return rendered
 
@@ -57,13 +52,6 @@ def write_outbox_email(
     subject: str,
     html_content: str,
 ) -> dict[str, str]:
-    """
-    Save a simulated email delivery into the outbox folder.
-
-    Creates:
-    - one .html file for browser preview
-    - one .txt metadata file for evidence / traceability
-    """
     outbox_dir = Path(settings.outbox_dir)
     outbox_dir.mkdir(parents=True, exist_ok=True)
 
@@ -77,6 +65,7 @@ def write_outbox_email(
         f"target_id: {target_id}\n"
         f"recipient: {recipient}\n"
         f"subject: {subject}\n"
+        f"delivery_mode: simulated_outbox\n"
         f"html_file: {html_path.name}\n"
     )
     meta_path.write_text(meta_text, encoding="utf-8")

@@ -26,6 +26,7 @@ def build_general_table(df: pd.DataFrame) -> pd.DataFrame:
     delivered = int(df["delivered"].sum())
     opened = int(df["opened_flag"].sum())
     clicked = int(df["clicked_flag"].sum())
+    reported = int(df["reported_flag"].sum()) if "reported_flag" in df.columns else 0
 
     rows = [
         {"indicador": "Total de observaciones", "valor": len(df)},
@@ -36,8 +37,10 @@ def build_general_table(df: pd.DataFrame) -> pd.DataFrame:
         {"indicador": "Correos entregados", "valor": delivered},
         {"indicador": "Aperturas registradas", "valor": opened},
         {"indicador": "Clics registrados", "valor": clicked},
+        {"indicador": "Reportes registrados", "valor": reported},
         {"indicador": "Tasa de apertura (%)", "valor": safe_rate(opened, delivered)},
         {"indicador": "Tasa de clic (%)", "valor": safe_rate(clicked, delivered)},
+        {"indicador": "Tasa de reporte (%)", "valor": safe_rate(reported, delivered)},
     ]
     return pd.DataFrame(rows)
 
@@ -53,6 +56,7 @@ def build_campaign_table(df: pd.DataFrame) -> pd.DataFrame:
             delivered=("delivered", "sum"),
             opened=("opened_flag", "sum"),
             clicked=("clicked_flag", "sum"),
+            reported=("reported_flag", "sum"),
         )
         .reset_index()
     )
@@ -62,6 +66,9 @@ def build_campaign_table(df: pd.DataFrame) -> pd.DataFrame:
     )
     grouped["tasa_clic_pct"] = grouped.apply(
         lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1
+    )
+    grouped["tasa_reporte_pct"] = grouped.apply(
+        lambda r: safe_rate(r["reported"], r["delivered"]), axis=1
     )
     return grouped.sort_values("campaign_id")
 
@@ -77,6 +84,7 @@ def build_segment_table(df: pd.DataFrame) -> pd.DataFrame:
             delivered=("delivered", "sum"),
             opened=("opened_flag", "sum"),
             clicked=("clicked_flag", "sum"),
+            reported=("reported_flag", "sum"),
         )
         .reset_index()
     )
@@ -86,6 +94,9 @@ def build_segment_table(df: pd.DataFrame) -> pd.DataFrame:
     )
     grouped["tasa_clic_pct"] = grouped.apply(
         lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1
+    )
+    grouped["tasa_reporte_pct"] = grouped.apply(
+        lambda r: safe_rate(r["reported"], r["delivered"]), axis=1
     )
     return grouped.sort_values("segment_id")
 
@@ -109,6 +120,7 @@ def build_template_table(df: pd.DataFrame) -> pd.DataFrame:
             delivered=("delivered", "sum"),
             opened=("opened_flag", "sum"),
             clicked=("clicked_flag", "sum"),
+            reported=("reported_flag", "sum"),
         )
         .reset_index()
     )
@@ -118,6 +130,9 @@ def build_template_table(df: pd.DataFrame) -> pd.DataFrame:
     )
     grouped["tasa_clic_pct"] = grouped.apply(
         lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1
+    )
+    grouped["tasa_reporte_pct"] = grouped.apply(
+        lambda r: safe_rate(r["reported"], r["delivered"]), axis=1
     )
     return grouped.sort_values("template_id")
 
@@ -143,6 +158,7 @@ def build_signal_table(df: pd.DataFrame) -> pd.DataFrame:
                 "delivered_con_senal": int(with_signal["delivered"].sum()),
                 "opened_con_senal": int(with_signal["opened_flag"].sum()),
                 "clicked_con_senal": int(with_signal["clicked_flag"].sum()),
+                "reported_con_senal": int(with_signal["reported_flag"].sum()),
                 "tasa_apertura_con_senal_pct": safe_rate(
                     with_signal["opened_flag"].sum(),
                     with_signal["delivered"].sum(),
@@ -151,16 +167,25 @@ def build_signal_table(df: pd.DataFrame) -> pd.DataFrame:
                     with_signal["clicked_flag"].sum(),
                     with_signal["delivered"].sum(),
                 ),
+                "tasa_reporte_con_senal_pct": safe_rate(
+                    with_signal["reported_flag"].sum(),
+                    with_signal["delivered"].sum(),
+                ),
                 "observaciones_sin_senal": len(without_signal),
                 "delivered_sin_senal": int(without_signal["delivered"].sum()),
                 "opened_sin_senal": int(without_signal["opened_flag"].sum()),
                 "clicked_sin_senal": int(without_signal["clicked_flag"].sum()),
+                "reported_sin_senal": int(without_signal["reported_flag"].sum()),
                 "tasa_apertura_sin_senal_pct": safe_rate(
                     without_signal["opened_flag"].sum(),
                     without_signal["delivered"].sum(),
                 ),
                 "tasa_clic_sin_senal_pct": safe_rate(
                     without_signal["clicked_flag"].sum(),
+                    without_signal["delivered"].sum(),
+                ),
+                "tasa_reporte_sin_senal_pct": safe_rate(
+                    without_signal["reported_flag"].sum(),
                     without_signal["delivered"].sum(),
                 ),
             }
@@ -186,11 +211,13 @@ def build_conclusions_text(
     total_targets = int(general_df.loc[general_df["indicador"] == "Total de targets", "valor"].iloc[0])
     open_rate = float(general_df.loc[general_df["indicador"] == "Tasa de apertura (%)", "valor"].iloc[0])
     click_rate = float(general_df.loc[general_df["indicador"] == "Tasa de clic (%)", "valor"].iloc[0])
+    report_rate = float(general_df.loc[general_df["indicador"] == "Tasa de reporte (%)", "valor"].iloc[0])
 
     lines.append(
         f"En el corte analizado se registraron {total_obs} observaciones, "
         f"correspondientes a {total_campaigns} campañas y {total_targets} targets únicos. "
-        f"La tasa global de apertura fue de {open_rate}% y la tasa global de clic fue de {click_rate}%."
+        f"La tasa global de apertura fue de {open_rate}%, la tasa global de clic fue de {click_rate}% "
+        f"y la tasa global de reporte fue de {report_rate}%."
     )
     lines.append("")
 
@@ -198,8 +225,8 @@ def build_conclusions_text(
         best_campaign = campaign_df.sort_values("tasa_clic_pct", ascending=False).iloc[0]
         lines.append(
             f"La campaña con mayor tasa de clic fue la campaña {int(best_campaign['campaign_id'])}, "
-            f"con una tasa de clic de {best_campaign['tasa_clic_pct']}% y una tasa de apertura de "
-            f"{best_campaign['tasa_apertura_pct']}%."
+            f"con una tasa de clic de {best_campaign['tasa_clic_pct']}% y una tasa de reporte de "
+            f"{best_campaign['tasa_reporte_pct']}%."
         )
         lines.append("")
 

@@ -12,6 +12,8 @@ from channels.email.renderer import (
     write_outbox_email,
 )
 from channels.email.validators import validate_email_template
+from channels.email.providers import send_email_smtp
+from core.config.settings import settings
 from core.db.session import SessionLocal
 from core.domain.models import Campaign, Target, Template, Event
 
@@ -19,11 +21,11 @@ from core.domain.models import Campaign, Target, Template, Event
 @celery_app.task(name="worker.simulate_send_campaign")
 def simulate_send_campaign(campaign_id: int) -> dict:
     """
-    Simula el envío de una campaña:
-    - genera uid por target si no existe
-    - renderiza subject y HTML final
-    - guarda HTML y metadatos en data/outbox/
-    - registra evento 'delivered'
+    Procesa una campaña en dos modos posibles:
+    - simulated_outbox: genera archivos HTML/TXT en data/outbox
+    - smtp: envía el correo realmente por SMTP
+
+    En ambos casos registra evento 'delivered' si el procesamiento fue exitoso.
     """
     db: Session = SessionLocal()
 
@@ -49,7 +51,7 @@ def simulate_send_campaign(campaign_id: int) -> dict:
 
         targets = db.query(Target).filter(Target.segment_id == camp.segment_id).all()
         sent = 0
-        outbox_files: list[dict[str, str]] = []
+        deliveries: list[dict] = []
 
         for target in targets:
             if not target.uid:
@@ -72,14 +74,48 @@ def simulate_send_campaign(campaign_id: int) -> dict:
                 template_id=tpl.id,
             )
 
-            outbox_info = write_outbox_email(
-                campaign_id=camp.id,
-                target_id=target.id,
-                recipient=target.recipient,
-                subject=rendered_subject,
-                html_content=rendered_html,
-            )
-            outbox_files.append(outbox_info)
+            delivery_meta = {
+                "uid": target.uid,
+                "subject": rendered_subject,
+                "delivery_mode": settings.delivery_mode,
+            }
+
+            if settings.delivery_mode == "smtp":
+                smtp_result = send_email_smtp(
+                    to_email=target.recipient,
+                    subject=rendered_subject,
+                    html_content=rendered_html,
+                )
+                delivery_meta["smtp_result"] = smtp_result
+                deliveries.append(
+                    {
+                        "target_id": target.id,
+                        "recipient": target.recipient,
+                        "mode": "smtp",
+                        "subject": rendered_subject,
+                    }
+                )
+
+            else:
+                outbox_info = write_outbox_email(
+                    campaign_id=camp.id,
+                    target_id=target.id,
+                    recipient=target.recipient,
+                    subject=rendered_subject,
+                    html_content=rendered_html,
+                )
+                delivery_meta["html_file"] = outbox_info["html_file"]
+                delivery_meta["meta_file"] = outbox_info["meta_file"]
+                deliveries.append(
+                    {
+                        "target_id": target.id,
+                        "recipient": target.recipient,
+                        "mode": "simulated_outbox",
+                        "subject": rendered_subject,
+                        "html_file": outbox_info["html_file"],
+                        "meta_file": outbox_info["meta_file"],
+                    }
+                )
 
             ev = Event(
                 campaign_id=camp.id,
@@ -87,13 +123,7 @@ def simulate_send_campaign(campaign_id: int) -> dict:
                 template_id=tpl.id,
                 event_type="delivered",
                 occurred_at=datetime.utcnow(),
-                meta={
-                    "uid": target.uid,
-                    "mode": "simulated_outbox",
-                    "subject": rendered_subject,
-                    "html_file": outbox_info["html_file"],
-                    "meta_file": outbox_info["meta_file"],
-                },
+                meta=delivery_meta,
             )
             db.add(ev)
             sent += 1
@@ -107,7 +137,8 @@ def simulate_send_campaign(campaign_id: int) -> dict:
             "ok": True,
             "campaign_id": camp.id,
             "targets": sent,
-            "outbox_files": outbox_files,
+            "delivery_mode": settings.delivery_mode,
+            "deliveries": deliveries,
         }
 
     except Exception as e:

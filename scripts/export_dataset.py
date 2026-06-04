@@ -66,9 +66,20 @@ def build_dataset(db: Session) -> pd.DataFrame:
                 .scalar()
                 or 0
             )
+            reported = (
+                db.query(func.count(Event.id))
+                .filter(
+                    Event.campaign_id == campaign.id,
+                    Event.target_id == target.id,
+                    Event.event_type == "reported",
+                )
+                .scalar()
+                or 0
+            )
 
             rows.append(
                 {
+                    "source": "observed",
                     "campaign_id": campaign.id,
                     "campaign_status": campaign.status,
                     "campaign_channel": campaign.channel,
@@ -91,8 +102,10 @@ def build_dataset(db: Session) -> pd.DataFrame:
                     "delivered": delivered,
                     "opened": opened,
                     "clicked": clicked,
+                    "reported": reported,
                     "opened_flag": 1 if opened > 0 else 0,
                     "clicked_flag": 1 if clicked > 0 else 0,
+                    "reported_flag": 1 if reported > 0 else 0,
                 }
             )
 

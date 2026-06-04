@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     smtp_username: str = Field(default="demo", alias="SMTP_USERNAME")
     smtp_password: str = Field(default="demo", alias="SMTP_PASSWORD")
     smtp_use_tls: bool = Field(default=True, alias="SMTP_USE_TLS")
+    smtp_use_ssl: bool = Field(default=False, alias="SMTP_USE_SSL")
+    smtp_from_email: str = Field(default="no-reply@example.com", alias="SMTP_FROM_EMAIL")
+    smtp_from_name: str = Field(default="Simulación Académica", alias="SMTP_FROM_NAME")
+    delivery_mode: str = Field(default="simulated_outbox", alias="DELIVERY_MODE")
 
     # JWT
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")

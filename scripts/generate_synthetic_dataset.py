@@ -228,6 +228,8 @@ def main():
                 else:
                     clicked_flag = 0
 
+                reported_flag = 0
+
                 rows.append(
                     {
                         "source": "synthetic",
@@ -253,8 +255,10 @@ def main():
                         "delivered": delivered,
                         "opened": opened_flag,
                         "clicked": clicked_flag,
+                        "reported": reported_flag,
                         "opened_flag": opened_flag,
                         "clicked_flag": clicked_flag,
+                        "reported_flag": reported_flag,
                     }
                 )
 

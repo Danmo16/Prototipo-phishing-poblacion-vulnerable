@@ -40,11 +40,15 @@ services:
     environment:
       SECRET_KEY: super-secret-key
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
-      SMTP_HOST: smtp.example.com
+      SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: demo
-      SMTP_PASSWORD: demo
+      SMTP_USERNAME: soulconfusion16@gmail.com
+      SMTP_PASSWORD: zsxw sfob rfmm bndw
       SMTP_USE_TLS: "true"
+      SMTP_USE_SSL: "false"
+      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_NAME: "Simulación Académica"
+      DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
       API_HOST: 0.0.0.0
       API_PORT: "8000"
@@ -69,11 +73,15 @@ services:
     environment:
       SECRET_KEY: super-secret-key
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
-      SMTP_HOST: smtp.example.com
+      SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: demo
-      SMTP_PASSWORD: demo
+      SMTP_USERNAME: soulconfusion16@gmail.com
+      SMTP_PASSWORD: zsxw sfob rfmm bndw
       SMTP_USE_TLS: "true"
+      SMTP_USE_SSL: "false"
+      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_NAME: "Simulación Académica"
+      DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
       API_HOST: 0.0.0.0
       API_PORT: "8000"
@@ -102,11 +110,15 @@ services:
     environment:
       SECRET_KEY: super-secret-key
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
-      SMTP_HOST: smtp.example.com
+      SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: demo
-      SMTP_PASSWORD: demo
+      SMTP_USERNAME: soulconfusion16@gmail.com
+      SMTP_PASSWORD: zsxw sfob rfmm bndw
       SMTP_USE_TLS: "true"
+      SMTP_USE_SSL: "false"
+      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_NAME: "Simulación Académica"
+      DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
       API_HOST: 0.0.0.0
       API_PORT: "8000"
@@ -131,11 +143,15 @@ services:
     environment:
       SECRET_KEY: super-secret-key
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
-      SMTP_HOST: smtp.example.com
+      SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: demo
-      SMTP_PASSWORD: demo
+      SMTP_USERNAME: soulconfusion16@gmail.com
+      SMTP_PASSWORD: zsxw sfob rfmm bndw
       SMTP_USE_TLS: "true"
+      SMTP_USE_SSL: "false"
+      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_NAME: "Simulación Académica"
+      DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
       API_HOST: 0.0.0.0
       API_PORT: "8000"
@@ -164,11 +180,15 @@ services:
     environment:
       SECRET_KEY: super-secret-key
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
-      SMTP_HOST: smtp.example.com
+      SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: demo
-      SMTP_PASSWORD: demo
+      SMTP_USERNAME: soulconfusion16@gmail.com
+      SMTP_PASSWORD: zsxw sfob rfmm bndw
       SMTP_USE_TLS: "true"
+      SMTP_USE_SSL: "false"
+      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_NAME: "Simulación Académica"
+      DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
       API_HOST: 0.0.0.0
       API_PORT: "8000"

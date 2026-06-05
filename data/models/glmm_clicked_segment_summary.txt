@@ -1,0 +1,22 @@
+                         Binomial Mixed GLM Results
+============================================================================
+                              Type Post. Mean Post. SD   SD  SD (LB) SD (UB)
+----------------------------------------------------------------------------
+Intercept                        M    -2.7697   0.0857                      
+C(age_bracket)[T.25-34]          M     0.3363   0.1569                      
+C(age_bracket)[T.35-44]          M    -0.4333   0.2905                      
+C(age_bracket)[T.45-54]          M     0.5648   0.1712                      
+C(age_bracket)[T.55+]            M    -0.3938   0.2269                      
+C(gender)[T.M]                   M    -0.2657   0.1147                      
+C(gender)[T.unknown]             M     2.1845   0.6293                      
+C(education)[T.Secundaria]       M    -0.0074   0.1629                      
+C(education)[T.Tecnica]          M     0.3900   0.1517                      
+C(education)[T.Universitaria]    M    -0.2846   0.1834                      
+signal_urgency                   M     0.2834   0.1638                      
+signal_authority                 M    -0.1036   0.1373                      
+signal_reward                    M    -0.0728   0.1767                      
+signal_personalization           M    -0.1730   0.1431                      
+re_segment_id                    V    -1.8028   0.1276 0.165   0.128   0.213
+============================================================================
+Parameter types are mean structure (M) and variance structure (V)
+Variance parameters are modeled as log standard deviations

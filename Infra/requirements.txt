@@ -31,3 +31,7 @@ passlib[bcrypt]==1.7.4
 python-multipart
 email-validator
 bcrypt==4.0.1
+weasyprint
+xhtml2pdf
+statsmodels
+patsy

@@ -1,0 +1,9 @@
+assignment_id,template_id,template_name,template_subject,signal_urgency,signal_authority,signal_reward,signal_personalization,segment_id,age_bracket,gender,education,segment_target_count,campaign_channel,repetition,random_seed,status,execution_order
+2,1,Template educativo v1,,0,0,0,0,1,18-24,N/A,Universitaria,3,email,2,42,planned,1
+6,3,Template urgencia v1,Acción requerida en su cuenta,1,1,0,0,1,18-24,N/A,Universitaria,3,email,2,42,planned,2
+1,1,Template educativo v1,,0,0,0,0,1,18-24,N/A,Universitaria,3,email,1,42,planned,3
+8,4,Template educativo formal,Notificación de seguridad para {{ name }},0,1,0,1,1,18-24,N/A,Universitaria,3,email,2,42,planned,4
+3,2,Template educativo v2,,0,0,0,0,1,18-24,N/A,Universitaria,3,email,1,42,planned,5
+5,3,Template urgencia v1,Acción requerida en su cuenta,1,1,0,0,1,18-24,N/A,Universitaria,3,email,1,42,planned,6
+4,2,Template educativo v2,,0,0,0,0,1,18-24,N/A,Universitaria,3,email,2,42,planned,7
+7,4,Template educativo formal,Notificación de seguridad para {{ name }},0,1,0,1,1,18-24,N/A,Universitaria,3,email,1,42,planned,8

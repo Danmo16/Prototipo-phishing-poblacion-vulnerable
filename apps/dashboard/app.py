@@ -59,7 +59,6 @@ def load_baseline_metrics() -> dict | None:
     metrics_path = MODEL_DIR / "baseline_logreg_metrics.json"
     if not metrics_path.exists():
         return None
-
     with open(metrics_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -73,6 +72,20 @@ def load_baseline_coefficients_df() -> pd.DataFrame:
 
 def load_baseline_predictions_df() -> pd.DataFrame:
     path = MODEL_DIR / "baseline_logreg_predictions.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_baseline_calibration_df() -> pd.DataFrame:
+    path = MODEL_DIR / "baseline_logreg_calibration.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_baseline_lift_df() -> pd.DataFrame:
+    path = MODEL_DIR / "baseline_logreg_lift.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
@@ -118,7 +131,6 @@ def load_xgboost_metrics(prefix: str = "xgboost") -> dict | None:
     metrics_path = MODEL_DIR / f"{prefix}_metrics.json"
     if not metrics_path.exists():
         return None
-
     with open(metrics_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -132,6 +144,20 @@ def load_xgboost_importances_df(prefix: str = "xgboost") -> pd.DataFrame:
 
 def load_xgboost_predictions_df(prefix: str = "xgboost") -> pd.DataFrame:
     path = MODEL_DIR / f"{prefix}_predictions.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_xgboost_calibration_df(prefix: str = "xgboost") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_calibration.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_xgboost_lift_df(prefix: str = "xgboost") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_lift.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
@@ -166,6 +192,12 @@ def load_metrics(db: Session) -> dict:
         .scalar()
         or 0
     )
+    total_reported = (
+        db.query(func.count(Event.id))
+        .filter(Event.event_type == "reported")
+        .scalar()
+        or 0
+    )
 
     return {
         "campaigns": total_campaigns,
@@ -176,8 +208,10 @@ def load_metrics(db: Session) -> dict:
         "delivered": total_delivered,
         "opened": total_opened,
         "clicked": total_clicked,
+        "reported": total_reported,
         "open_rate": safe_rate(total_opened, total_delivered),
         "click_rate": safe_rate(total_clicked, total_delivered),
+        "report_rate": safe_rate(total_reported, total_delivered),
     }
 
 
@@ -225,6 +259,16 @@ def load_analytic_dataset_from_db(db: Session) -> pd.DataFrame:
                 .scalar()
                 or 0
             )
+            reported = (
+                db.query(func.count(Event.id))
+                .filter(
+                    Event.campaign_id == campaign.id,
+                    Event.target_id == target.id,
+                    Event.event_type == "reported",
+                )
+                .scalar()
+                or 0
+            )
 
             rows.append(
                 {
@@ -251,8 +295,10 @@ def load_analytic_dataset_from_db(db: Session) -> pd.DataFrame:
                     "delivered": delivered,
                     "opened": opened,
                     "clicked": clicked,
+                    "reported": reported,
                     "opened_flag": 1 if opened > 0 else 0,
                     "clicked_flag": 1 if clicked > 0 else 0,
+                    "reported_flag": 1 if reported > 0 else 0,
                 }
             )
 
@@ -283,16 +329,12 @@ def load_csv_dataset(path: Path) -> pd.DataFrame:
 def load_selected_analytic_dataset(db: Session, dataset_option: str) -> pd.DataFrame:
     if dataset_option == "Observado (desde BD)":
         return load_analytic_dataset_from_db(db)
-
     if dataset_option == "Observado (CSV exportado)":
         return load_csv_dataset(EXPORT_DIR / "analytic_dataset.csv")
-
     if dataset_option == "Sintético":
         return load_csv_dataset(EXPORT_DIR / "analytic_dataset_synthetic.csv")
-
     if dataset_option == "Combinado":
         return load_csv_dataset(EXPORT_DIR / "analytic_dataset_combined.csv")
-
     return pd.DataFrame()
 
 
@@ -307,6 +349,7 @@ def build_general_descriptive_df(analytic_df: pd.DataFrame) -> pd.DataFrame:
     delivered = int(analytic_df["delivered"].sum())
     opened = int(analytic_df["opened_flag"].sum())
     clicked = int(analytic_df["clicked_flag"].sum())
+    reported = int(analytic_df["reported_flag"].sum()) if "reported_flag" in analytic_df.columns else 0
 
     rows = [
         {"indicador": "Total de observaciones", "valor": len(analytic_df)},
@@ -317,8 +360,10 @@ def build_general_descriptive_df(analytic_df: pd.DataFrame) -> pd.DataFrame:
         {"indicador": "Correos entregados", "valor": delivered},
         {"indicador": "Aperturas registradas", "valor": opened},
         {"indicador": "Clics registrados", "valor": clicked},
+        {"indicador": "Reportes registrados", "valor": reported},
         {"indicador": "Tasa de apertura (%)", "valor": safe_rate(opened, delivered)},
         {"indicador": "Tasa de clic (%)", "valor": safe_rate(clicked, delivered)},
+        {"indicador": "Tasa de reporte (%)", "valor": safe_rate(reported, delivered)},
     ]
     return pd.DataFrame(rows)
 
@@ -334,16 +379,14 @@ def build_demographic_summary_df(df: pd.DataFrame) -> pd.DataFrame:
             delivered=("delivered", "sum"),
             opened=("opened_flag", "sum"),
             clicked=("clicked_flag", "sum"),
+            reported=("reported_flag", "sum"),
         )
         .reset_index()
     )
 
-    grouped["open_rate_pct"] = grouped.apply(
-        lambda r: safe_rate(r["opened"], r["delivered"]), axis=1
-    )
-    grouped["click_rate_pct"] = grouped.apply(
-        lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1
-    )
+    grouped["open_rate_pct"] = grouped.apply(lambda r: safe_rate(r["opened"], r["delivered"]), axis=1)
+    grouped["click_rate_pct"] = grouped.apply(lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1)
+    grouped["report_rate_pct"] = grouped.apply(lambda r: safe_rate(r["reported"], r["delivered"]), axis=1)
     return grouped
 
 
@@ -360,18 +403,70 @@ def build_campaign_summary_df(df: pd.DataFrame) -> pd.DataFrame:
             delivered=("delivered", "sum"),
             opened=("opened_flag", "sum"),
             clicked=("clicked_flag", "sum"),
+            reported=("reported_flag", "sum"),
         )
         .reset_index()
     )
 
-    grouped["open_rate_pct"] = grouped.apply(
-        lambda r: safe_rate(r["opened"], r["delivered"]), axis=1
-    )
-    grouped["click_rate_pct"] = grouped.apply(
-        lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1
-    )
+    grouped["open_rate_pct"] = grouped.apply(lambda r: safe_rate(r["opened"], r["delivered"]), axis=1)
+    grouped["click_rate_pct"] = grouped.apply(lambda r: safe_rate(r["clicked"], r["delivered"]), axis=1)
+    grouped["report_rate_pct"] = grouped.apply(lambda r: safe_rate(r["reported"], r["delivered"]), axis=1)
     return grouped
 
+def load_baseline_vs_xgboost_df() -> pd.DataFrame:
+    path = MODEL_DIR / "baseline_vs_xgboost_comparison.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_baseline_vs_xgboost_summary() -> str:
+    path = MODEL_DIR / "baseline_vs_xgboost_summary.txt"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+def load_glmm_metrics(prefix: str = "glmm_clicked_segment") -> dict | None:
+    path = MODEL_DIR / f"{prefix}_metrics.json"
+    if not path.exists():
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_glmm_fixed_effects_df(prefix: str = "glmm_clicked_segment") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_fixed_effects.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_glmm_variance_components_df(prefix: str = "glmm_clicked_segment") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_variance_components.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_glmm_predictions_df(prefix: str = "glmm_clicked_segment") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_predictions.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_glmm_summary_text(prefix: str = "glmm_clicked_segment") -> str:
+    path = MODEL_DIR / f"{prefix}_summary.txt"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+def load_glmm_academic_summary_text(prefix: str = "glmm_clicked_segment") -> str:
+    path = MODEL_DIR / f"{prefix}_academic_summary.txt"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
 
 def build_signal_comparison_df(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
@@ -398,23 +493,13 @@ def build_signal_comparison_df(df: pd.DataFrame) -> pd.DataFrame:
             {
                 "signal": signal_labels[signal],
                 "n_with_signal": len(with_signal),
-                "open_rate_with_signal_pct": safe_rate(
-                    with_signal["opened_flag"].sum(),
-                    with_signal["delivered"].sum(),
-                ),
-                "click_rate_with_signal_pct": safe_rate(
-                    with_signal["clicked_flag"].sum(),
-                    with_signal["delivered"].sum(),
-                ),
+                "open_rate_with_signal_pct": safe_rate(with_signal["opened_flag"].sum(), with_signal["delivered"].sum()),
+                "click_rate_with_signal_pct": safe_rate(with_signal["clicked_flag"].sum(), with_signal["delivered"].sum()),
+                "report_rate_with_signal_pct": safe_rate(with_signal["reported_flag"].sum(), with_signal["delivered"].sum()),
                 "n_without_signal": len(without_signal),
-                "open_rate_without_signal_pct": safe_rate(
-                    without_signal["opened_flag"].sum(),
-                    without_signal["delivered"].sum(),
-                ),
-                "click_rate_without_signal_pct": safe_rate(
-                    without_signal["clicked_flag"].sum(),
-                    without_signal["delivered"].sum(),
-                ),
+                "open_rate_without_signal_pct": safe_rate(without_signal["opened_flag"].sum(), without_signal["delivered"].sum()),
+                "click_rate_without_signal_pct": safe_rate(without_signal["clicked_flag"].sum(), without_signal["delivered"].sum()),
+                "report_rate_without_signal_pct": safe_rate(without_signal["reported_flag"].sum(), without_signal["delivered"].sum()),
             }
         )
 
@@ -447,6 +532,11 @@ def main():
             value="xgboost",
         )
 
+        glmm_prefix = st.sidebar.text_input(
+            "Prefijo de resultados GLMM",
+            value="glmm_clicked_segment",
+        )
+
         analytic_df = load_selected_analytic_dataset(db, dataset_option)
 
         descriptive_general_df = build_general_descriptive_df(analytic_df)
@@ -457,15 +547,29 @@ def main():
         baseline_metrics = load_baseline_metrics()
         baseline_coef_df = load_baseline_coefficients_df()
         baseline_pred_df = load_baseline_predictions_df()
+        baseline_calibration_df = load_baseline_calibration_df()
+        baseline_lift_df = load_baseline_lift_df()
 
         comparison_df = load_model_comparison_df()
         comparison_logreg_coef_df = load_logreg_coefficients_comparison_df()
         tree_imp_df = load_tree_importances_df()
         comparison_pred_df = load_model_predictions_comparison_df()
 
+        baseline_vs_xgb_df = load_baseline_vs_xgboost_df()
+        baseline_vs_xgb_summary = load_baseline_vs_xgboost_summary()
+
         xgb_metrics = load_xgboost_metrics(prefix=xgb_prefix)
         xgb_importance_df = load_xgboost_importances_df(prefix=xgb_prefix)
         xgb_pred_df = load_xgboost_predictions_df(prefix=xgb_prefix)
+        xgb_calibration_df = load_xgboost_calibration_df(prefix=xgb_prefix)
+        xgb_lift_df = load_xgboost_lift_df(prefix=xgb_prefix)
+
+        glmm_metrics = load_glmm_metrics(prefix=glmm_prefix)
+        glmm_fixed_df = load_glmm_fixed_effects_df(prefix=glmm_prefix)
+        glmm_vc_df = load_glmm_variance_components_df(prefix=glmm_prefix)
+        glmm_pred_df = load_glmm_predictions_df(prefix=glmm_prefix)
+        glmm_summary_text = load_glmm_summary_text(prefix=glmm_prefix)
+        glmm_academic_summary_text = load_glmm_academic_summary_text(prefix=glmm_prefix)
 
         tab1, tab2 = st.tabs(["Operativo", "Analítico"])
 
@@ -481,7 +585,12 @@ def main():
             c5.metric("Delivered", metrics["delivered"])
             c6.metric("Opened", metrics["opened"])
             c7.metric("Clicked", metrics["clicked"])
-            c8.metric("Open / Click Rate", f'{metrics["open_rate"]}% / {metrics["click_rate"]}%')
+            c8.metric("Reported", metrics["reported"])
+
+            c9, c10, c11 = st.columns(3)
+            c9.metric("Open Rate", f'{metrics["open_rate"]}%')
+            c10.metric("Click Rate", f'{metrics["click_rate"]}%')
+            c11.metric("Report Rate", f'{metrics["report_rate"]}%')
 
             st.divider()
             st.subheader("Dataset analítico seleccionado")
@@ -574,12 +683,13 @@ def main():
                     "Ejecuta: python -m scripts.train_baseline_model"
                 )
             else:
-                b1, b2, b3, b4, b5 = st.columns(5)
+                b1, b2, b3, b4, b5, b6 = st.columns(6)
                 b1.metric("Accuracy", baseline_metrics.get("accuracy"))
                 b2.metric("Precision", baseline_metrics.get("precision"))
                 b3.metric("Recall", baseline_metrics.get("recall"))
                 b4.metric("F1", baseline_metrics.get("f1"))
                 b5.metric("ROC-AUC", baseline_metrics.get("roc_auc"))
+                b6.metric("Brier", baseline_metrics.get("brier_score"))
 
                 st.markdown("#### Coeficientes del baseline")
                 if baseline_coef_df.empty:
@@ -605,6 +715,30 @@ def main():
                         "text/csv",
                     )
 
+                st.markdown("#### Calibración del baseline")
+                if baseline_calibration_df.empty:
+                    st.info("No hay datos de calibración cargados.")
+                else:
+                    st.dataframe(baseline_calibration_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar calibración baseline (CSV)",
+                        dataframe_to_csv_bytes(baseline_calibration_df),
+                        "baseline_logreg_calibration.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Lift del baseline")
+                if baseline_lift_df.empty:
+                    st.info("No hay tabla de lift cargada.")
+                else:
+                    st.dataframe(baseline_lift_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar lift baseline (CSV)",
+                        dataframe_to_csv_bytes(baseline_lift_df),
+                        "baseline_logreg_lift.csv",
+                        "text/csv",
+                    )
+
             st.divider()
 
             st.subheader("Modelo XGBoost")
@@ -616,12 +750,13 @@ def main():
                     "Ejecuta el entrenamiento o ajusta el prefijo en la barra lateral."
                 )
             else:
-                x1, x2, x3, x4, x5 = st.columns(5)
+                x1, x2, x3, x4, x5, x6 = st.columns(6)
                 x1.metric("Accuracy", xgb_metrics.get("accuracy"))
                 x2.metric("Precision", xgb_metrics.get("precision"))
                 x3.metric("Recall", xgb_metrics.get("recall"))
                 x4.metric("F1", xgb_metrics.get("f1"))
                 x5.metric("ROC-AUC", xgb_metrics.get("roc_auc"))
+                x6.metric("Brier", xgb_metrics.get("brier_score"))
 
                 st.markdown("#### Métricas completas XGBoost")
                 st.json(xgb_metrics)
@@ -649,6 +784,122 @@ def main():
                         f"{xgb_prefix}_predictions.csv",
                         "text/csv",
                     )
+
+                st.markdown("#### Calibración - XGBoost")
+                if xgb_calibration_df.empty:
+                    st.info("No hay datos de calibración cargados.")
+                else:
+                    st.dataframe(xgb_calibration_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar calibración XGBoost (CSV)",
+                        dataframe_to_csv_bytes(xgb_calibration_df),
+                        f"{xgb_prefix}_calibration.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Lift - XGBoost")
+                if xgb_lift_df.empty:
+                    st.info("No hay tabla de lift cargada.")
+                else:
+                    st.dataframe(xgb_lift_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar lift XGBoost (CSV)",
+                        dataframe_to_csv_bytes(xgb_lift_df),
+                        f"{xgb_prefix}_lift.csv",
+                        "text/csv",
+                    )
+
+            st.divider()
+
+            st.subheader("Modelo GLMM binomial")
+            st.caption(f"Prefijo cargado: **{glmm_prefix}**")
+
+            if glmm_metrics is None:
+                st.info(
+                    "No se encontraron resultados de GLMM para ese prefijo. Ejecuta por ejemplo:\n"
+                    "python -m scripts.train_glmm_model --dataset data/exports/analytic_dataset_combined.csv "
+                    "--output-prefix glmm_clicked_segment --random-effect segment_id --method vb\n"
+                    "python -m scripts.summarize_glmm_results --prefix glmm_clicked_segment"
+                )
+            else:
+                g1, g2, g3, g4 = st.columns(4)
+                g1.metric("Observaciones", glmm_metrics.get("n_rows"))
+                g2.metric("Casos positivos", glmm_metrics.get("positive_cases_total"))
+                g3.metric("Efecto aleatorio", glmm_metrics.get("random_effect"))
+                g4.metric("Método", glmm_metrics.get("method"))
+
+                st.markdown("#### Configuración del GLMM")
+                st.json(glmm_metrics)
+
+                st.markdown("#### Efectos fijos")
+                if glmm_fixed_df.empty:
+                    st.info("No hay efectos fijos cargados.")
+                else:
+                    st.dataframe(glmm_fixed_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar efectos fijos GLMM (CSV)",
+                        dataframe_to_csv_bytes(glmm_fixed_df),
+                        f"{glmm_prefix}_fixed_effects.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Componentes de varianza")
+                if glmm_vc_df.empty:
+                    st.info("No hay componentes de varianza cargados.")
+                else:
+                    st.dataframe(glmm_vc_df, use_container_width=True)
+                    st.download_button(
+                        "Descargar componentes de varianza GLMM (CSV)",
+                        dataframe_to_csv_bytes(glmm_vc_df),
+                        f"{glmm_prefix}_variance_components.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Predicciones GLMM")
+                if glmm_pred_df.empty:
+                    st.info("No hay predicciones cargadas.")
+                else:
+                    st.dataframe(glmm_pred_df.head(100), use_container_width=True)
+                    st.download_button(
+                        "Descargar predicciones GLMM (CSV)",
+                        dataframe_to_csv_bytes(glmm_pred_df),
+                        f"{glmm_prefix}_predictions.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Resumen técnico del ajuste")
+                if glmm_summary_text:
+                    st.text(glmm_summary_text)
+                else:
+                    st.info("No hay resumen técnico cargado.")
+
+                st.markdown("#### Interpretación académica del GLMM")
+                if glmm_academic_summary_text:
+                    st.text(glmm_academic_summary_text)
+                else:
+                    st.info("No hay resumen académico cargado.")
+
+            st.divider()
+
+            st.subheader("Comparación baseline vs XGBoost")
+            if baseline_vs_xgb_df.empty:
+                st.info(
+                    "No se encontró la comparación baseline vs XGBoost. Ejecuta:\n"
+                    "python -m scripts.compare_baseline_vs_xgboost --xgb-prefix xgboost_combined\n"
+                    "python -m scripts.summarize_baseline_vs_xgboost --xgb-prefix xgboost_combined"
+                )
+            else:
+                st.dataframe(baseline_vs_xgb_df, use_container_width=True)
+                st.download_button(
+                    "Descargar comparación baseline vs XGBoost (CSV)",
+                    dataframe_to_csv_bytes(baseline_vs_xgb_df),
+                    "baseline_vs_xgboost_comparison.csv",
+                    "text/csv",
+                )
+
+                if baseline_vs_xgb_summary:
+                    st.markdown("#### Interpretación comparativa")
+                    st.text(baseline_vs_xgb_summary)
 
             st.divider()
 
@@ -703,7 +954,10 @@ def main():
             st.write(
                 "Esta sección permite alternar entre datos observados, sintéticos y combinados. "
                 "Además, integra resultados de análisis descriptivo, regresión logística baseline, "
-                "XGBoost y comparación entre modelos, manteniendo trazabilidad metodológica para la tesis."
+                "XGBoost, GLMM y comparación entre modelos, incluyendo métricas probabilísticas "
+                "como Brier score, calibración y lift. "
+                "El GLMM se interpreta como un análisis complementario para explorar heterogeneidad "
+                "entre grupos, por ejemplo entre segmentos o campañas."
             )
 
     finally:

@@ -36,6 +36,7 @@ def main():
     lines.append(f"Recall: {metrics.get('recall')}")
     lines.append(f"F1-score: {metrics.get('f1')}")
     lines.append(f"ROC-AUC: {metrics.get('roc_auc')}")
+    lines.append(f"Brier score: {metrics.get('brier_score')}")
     lines.append("")
     lines.append("Variables con mayor peso absoluto en el modelo:")
     lines.append("")
@@ -49,7 +50,8 @@ def main():
     lines.append(
         "Interpretación sugerida: los coeficientes positivos se asocian a una mayor "
         "probabilidad estimada de clic, mientras que los coeficientes negativos "
-        "se asocian a una menor probabilidad, manteniendo constantes las demás variables."
+        "se asocian a una menor probabilidad, manteniendo constantes las demás variables. "
+        "El Brier score complementa la evaluación al medir la calidad probabilística del modelo."
     )
 
     OUTPUT_PATH.write_text("\n".join(lines), encoding="utf-8")

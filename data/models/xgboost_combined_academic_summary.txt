@@ -1,0 +1,34 @@
+Resumen académico del modelo XGBoost
+======================================================================
+
+Dataset utilizado: C:\Users\USUARIO\Desktop\Prototipo Phishing\data\exports\analytic_dataset_combined.csv
+Dispositivo utilizado: cuda
+Observaciones totales: 2412
+Observaciones de entrenamiento: 1688
+Observaciones de prueba: 724
+Casos positivos totales: 146
+Accuracy: 0.6215469613259669
+Precision: 0.08029197080291971
+Recall: 0.5
+F1-score: 0.13836477987421383
+ROC-AUC: 0.5578375668449198
+Brier score: 0.23540118399666665
+
+Distribución de fuentes en el conjunto de prueba:
+- synthetic: 721
+- observed: 3
+
+Variables con mayor importancia en XGBoost:
+
+- cat__age_bracket_55+: importance=0.076751
+- cat__gender_unknown: importance=0.071530
+- cat__education_Universitaria: importance=0.065471
+- cat__age_bracket_35-44: importance=0.064725
+- num__signal_urgency: importance=0.063825
+- cat__education_Posgrado: importance=0.062758
+- cat__education_Tecnica: importance=0.062656
+- cat__age_bracket_18-24: importance=0.062626
+- num__signal_reward: importance=0.062212
+- cat__age_bracket_45-54: importance=0.062056
+
+Interpretación sugerida: XGBoost permite estimar la probabilidad de clic a partir de variables demográficas y señales del mensaje. El Brier score complementa la evaluación al medir la calidad de calibración de las probabilidades predichas.

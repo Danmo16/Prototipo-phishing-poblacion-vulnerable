@@ -1,0 +1,17 @@
+feature,importance
+cat__age_bracket_55+,0.076751314
+cat__gender_unknown,0.07153038
+cat__education_Universitaria,0.065470845
+cat__age_bracket_35-44,0.06472464
+num__signal_urgency,0.063824736
+cat__education_Posgrado,0.06275846
+cat__education_Tecnica,0.06265626
+cat__age_bracket_18-24,0.06262582
+num__signal_reward,0.062211987
+cat__age_bracket_45-54,0.062055964
+cat__gender_M,0.061470155
+num__signal_personalization,0.059973847
+cat__age_bracket_25-34,0.05988385
+num__signal_authority,0.05702061
+cat__education_Secundaria,0.054836847
+cat__gender_F,0.05220423

@@ -27,6 +27,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import train_test_split
 
 from ml.preprocessing import clean_dataset, get_feature_matrix
+from ml.evaluation import safe_brier_score, build_calibration_df, build_lift_table
 
 
 EXPORT_DIR = Path("data/exports")
@@ -100,7 +101,6 @@ def main():
         ]
     )
 
-    # Si hay muy pocos datos, entrena sobre todo el dataset y evalúa ahí mismo.
     if len(df) < 10 or y.nunique() < 2:
         pipeline.fit(X, y)
         y_pred = pipeline.predict(X)
@@ -115,12 +115,16 @@ def main():
             "recall": float(recall_score(y, y_pred, zero_division=0)),
             "f1": float(f1_score(y, y_pred, zero_division=0)),
             "roc_auc": safe_roc_auc(y, y_prob),
+            "brier_score": safe_brier_score(y, y_prob),
             "confusion_matrix": confusion_matrix(y, y_pred).tolist(),
         }
 
         result_df = df.copy()
         result_df["pred_clicked_flag"] = y_pred
         result_df["pred_clicked_prob"] = y_prob
+
+        calibration_df = build_calibration_df(y, y_prob, n_bins=5)
+        lift_df = build_lift_table(y, y_prob, n_bins=5)
 
     else:
         X_train, X_test, y_train, y_test, df_train, df_test = train_test_split(
@@ -144,6 +148,7 @@ def main():
             "recall": float(recall_score(y_test, y_pred, zero_division=0)),
             "f1": float(f1_score(y_test, y_pred, zero_division=0)),
             "roc_auc": safe_roc_auc(y_test, y_prob),
+            "brier_score": safe_brier_score(y_test, y_prob),
             "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
         }
 
@@ -151,7 +156,9 @@ def main():
         result_df["pred_clicked_flag"] = y_pred
         result_df["pred_clicked_prob"] = y_prob
 
-    # Extraer nombres de features + coeficientes
+        calibration_df = build_calibration_df(y_test, y_prob, n_bins=10)
+        lift_df = build_lift_table(y_test, y_prob, n_bins=10)
+
     fitted_preprocessor = pipeline.named_steps["preprocessor"]
     fitted_model = pipeline.named_steps["model"]
 
@@ -164,23 +171,28 @@ def main():
         }
     ).sort_values("abs_coefficient", ascending=False)
 
-    # Exportar artefactos
     metrics_path = MODEL_DIR / "baseline_logreg_metrics.json"
     coef_path = MODEL_DIR / "baseline_logreg_coefficients.csv"
     pred_path = MODEL_DIR / "baseline_logreg_predictions.csv"
     model_path = MODEL_DIR / "baseline_logreg_pipeline.joblib"
+    calibration_path = MODEL_DIR / "baseline_logreg_calibration.csv"
+    lift_path = MODEL_DIR / "baseline_logreg_lift.csv"
 
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
 
     coef_df.to_csv(coef_path, index=False, encoding="utf-8")
     result_df.to_csv(pred_path, index=False, encoding="utf-8")
+    calibration_df.to_csv(calibration_path, index=False, encoding="utf-8")
+    lift_df.to_csv(lift_path, index=False, encoding="utf-8")
     joblib.dump(pipeline, model_path)
 
     print("Modelo baseline entrenado/exportado correctamente.")
     print(f"Métricas: {metrics_path.resolve()}")
     print(f"Coeficientes: {coef_path.resolve()}")
     print(f"Predicciones: {pred_path.resolve()}")
+    print(f"Calibración: {calibration_path.resolve()}")
+    print(f"Lift: {lift_path.resolve()}")
     print(f"Modelo: {model_path.resolve()}")
 
 

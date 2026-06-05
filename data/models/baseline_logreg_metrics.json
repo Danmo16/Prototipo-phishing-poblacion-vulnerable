@@ -1,20 +1,24 @@
 {
-  "mode": "train_only_small_sample",
-  "n_rows": 9,
-  "clicked_positive_cases": 3,
-  "accuracy": 0.6666666666666666,
-  "precision": 0.5,
-  "recall": 1.0,
-  "f1": 0.6666666666666666,
-  "roc_auc": 0.75,
+  "mode": "train_test_split",
+  "n_rows": 12,
+  "train_rows": 8,
+  "test_rows": 4,
+  "clicked_positive_cases_total": 4,
+  "clicked_positive_cases_test": 1,
+  "accuracy": 0.25,
+  "precision": 0.0,
+  "recall": 0.0,
+  "f1": 0.0,
+  "roc_auc": 0.16666666666666669,
+  "brier_score": 0.5311005331636478,
   "confusion_matrix": [
     [
-      3,
-      3
+      1,
+      2
     ],
     [
-      0,
-      3
+      1,
+      0
     ]
   ]
 }

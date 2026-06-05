@@ -1,0 +1,13 @@
+{
+  "model": "glmm_binomial",
+  "dataset_path": "C:\\Users\\USUARIO\\Desktop\\Prototipo Phishing\\data\\exports\\analytic_dataset_combined.csv",
+  "output_prefix": "glmm_clicked_segment",
+  "random_effect": "segment_id",
+  "method": "vb",
+  "n_rows": 2412,
+  "positive_cases_total": 146,
+  "formula_fixed": "clicked_flag ~ signal_urgency + signal_authority + signal_reward + signal_personalization + C(age_bracket) + C(gender) + C(education)",
+  "vc_formulas": {
+    "re_segment_id": "0 + C(segment_id)"
+  }
+}

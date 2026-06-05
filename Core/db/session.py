@@ -1,49 +1,41 @@
 # core/db/session.py
 from __future__ import annotations
 
-from contextlib import contextmanager
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from core.config.settings import settings
 
-# Engine
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    future=True,
-)
 
-# Session factory
+def _build_engine():
+    database_url = settings.database_url
+
+    if database_url.startswith("sqlite"):
+        return create_engine(
+            database_url,
+            connect_args={"check_same_thread": False},
+            future=True,
+        )
+
+    return create_engine(
+        database_url,
+        pool_pre_ping=True,
+        future=True,
+    )
+
+
+engine = _build_engine()
+
 SessionLocal = sessionmaker(
-    bind=engine,
     autocommit=False,
     autoflush=False,
-    class_=Session,
-    future=True,
+    bind=engine,
 )
 
-def get_db():
-    """
-    FastAPI dependency that yields a DB session and ensures it is closed.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
-@contextmanager
-def db_session():
-    """
-    Context manager for scripts/CLI usage.
-    """
+def get_db():
     db = SessionLocal()
     try:
         yield db
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
     finally:
         db.close()

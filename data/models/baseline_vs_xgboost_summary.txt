@@ -1,0 +1,30 @@
+Comparación académica entre regresión logística baseline y XGBoost
+================================================================================
+
+Se compararon dos enfoques de modelado para la estimación de probabilidad de clic: una regresión logística baseline y un modelo XGBoost identificado como 'xgboost_combined'.
+
+Resultados cuantitativos:
+- Baseline - Accuracy: 0.25
+- Baseline - Precision: 0.0
+- Baseline - Recall: 0.0
+- Baseline - F1: 0.0
+- Baseline - ROC-AUC: 0.1666666666666666
+- Baseline - Brier score: 0.5311005331636478
+
+- XGBoost - Accuracy: 0.6215469613259669
+- XGBoost - Precision: 0.0802919708029197
+- XGBoost - Recall: 0.5
+- XGBoost - F1: 0.1383647798742138
+- XGBoost - ROC-AUC: 0.5578375668449198
+- XGBoost - Brier score: 0.2354011839966666
+
+XGBoost superó al baseline en accuracy.
+XGBoost superó al baseline en precision.
+XGBoost superó al baseline en recall.
+XGBoost superó al baseline en F1.
+XGBoost superó al baseline en ROC-AUC.
+XGBoost presentó mejor desempeño en Brier score (menor valor).
+
+Interpretación sugerida: la regresión logística baseline ofrece mayor interpretabilidad por medio de coeficientes directos y una lectura más simple de la contribución de cada variable. Por su parte, XGBoost puede capturar relaciones no lineales e interacciones más complejas entre señales del mensaje y atributos demográficos.
+
+Desde la perspectiva metodológica, la regresión logística puede reportarse como modelo base por su transparencia, mientras que XGBoost puede presentarse como modelo complementario de mayor flexibilidad predictiva.

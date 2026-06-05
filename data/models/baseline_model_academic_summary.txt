@@ -1,22 +1,23 @@
 Resumen académico del modelo baseline (Regresión Logística)
 ======================================================================
 
-Modo de entrenamiento: train_only_small_sample
-Número de observaciones: 9
-Accuracy: 0.6666666666666666
-Precision: 0.5
-Recall: 1.0
-F1-score: 0.6666666666666666
-ROC-AUC: 0.75
+Modo de entrenamiento: train_test_split
+Número de observaciones: 12
+Accuracy: 0.25
+Precision: 0.0
+Recall: 0.0
+F1-score: 0.0
+ROC-AUC: 0.16666666666666669
+Brier score: 0.5311005331636478
 
 Variables con mayor peso absoluto en el modelo:
 
-- num__signal_authority: coef=-0.585054 | abs=0.585054
-- num__signal_personalization: coef=-0.585054 | abs=0.585054
-- cat__age_bracket_18-24: coef=0.000116 | abs=0.000116
-- cat__gender_unknown: coef=0.000116 | abs=0.000116
-- cat__education_Universitaria: coef=0.000116 | abs=0.000116
+- num__signal_authority: coef=0.412200 | abs=0.412200
+- num__signal_personalization: coef=0.412200 | abs=0.412200
+- cat__age_bracket_18-24: coef=-0.000008 | abs=0.000008
+- cat__gender_unknown: coef=-0.000008 | abs=0.000008
+- cat__education_Universitaria: coef=-0.000008 | abs=0.000008
 - num__signal_urgency: coef=0.000000 | abs=0.000000
 - num__signal_reward: coef=0.000000 | abs=0.000000
 
-Interpretación sugerida: los coeficientes positivos se asocian a una mayor probabilidad estimada de clic, mientras que los coeficientes negativos se asocian a una menor probabilidad, manteniendo constantes las demás variables.
+Interpretación sugerida: los coeficientes positivos se asocian a una mayor probabilidad estimada de clic, mientras que los coeficientes negativos se asocian a una menor probabilidad, manteniendo constantes las demás variables. El Brier score complementa la evaluación al medir la calidad probabilística del modelo.

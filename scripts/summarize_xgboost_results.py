@@ -56,6 +56,7 @@ def main():
     lines.append(f"Recall: {metrics.get('recall')}")
     lines.append(f"F1-score: {metrics.get('f1')}")
     lines.append(f"ROC-AUC: {metrics.get('roc_auc')}")
+    lines.append(f"Brier score: {metrics.get('brier_score')}")
     lines.append("")
 
     if "test_source_distribution" in metrics:
@@ -74,8 +75,9 @@ def main():
     lines.append("")
     lines.append(
         "Interpretación sugerida: XGBoost permite estimar la probabilidad de clic "
-        "a partir de variables demográficas y señales del mensaje, identificando "
-        "qué características contribuyen con mayor peso relativo dentro del modelo."
+        "a partir de variables demográficas y señales del mensaje. "
+        "El Brier score complementa la evaluación al medir la calidad de calibración "
+        "de las probabilidades predichas."
     )
 
     output_path.write_text("\n".join(lines), encoding="utf-8")

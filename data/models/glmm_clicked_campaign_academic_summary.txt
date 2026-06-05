@@ -1,0 +1,30 @@
+Resumen académico del GLMM binomial
+======================================================================
+
+Dataset utilizado: C:\Users\USUARIO\Desktop\Prototipo Phishing\data\exports\analytic_dataset_combined.csv
+Efecto aleatorio: campaign_id
+Método de ajuste: vb
+Observaciones totales: 2412
+Casos positivos totales: 146
+
+Interpretación general:
+El modelo GLMM binomial se utilizó como aproximación para analizar la probabilidad de clic incorporando efectos fijos de señales del mensaje y variables demográficas, junto con un intercepto aleatorio por grupo.
+
+Términos con mayor asociación positiva estimada:
+- C(gender)[T.unknown]: media posterior=2.143662, OR aprox=8.530620
+- C(age_bracket)[T.45-54]: media posterior=0.579999, OR aprox=1.786037
+- C(education)[T.Tecnica]: media posterior=0.413487, OR aprox=1.512082
+- C(age_bracket)[T.25-34]: media posterior=0.360544, OR aprox=1.434109
+- signal_urgency: media posterior=0.278758, OR aprox=1.321488
+
+Términos con asociación negativa estimada:
+- Intercept: media posterior=-2.801012, OR aprox=0.060749
+- C(age_bracket)[T.35-44]: media posterior=-0.415708, OR aprox=0.659873
+- C(age_bracket)[T.55+]: media posterior=-0.379841, OR aprox=0.683970
+- C(gender)[T.M]: media posterior=-0.271207, OR aprox=0.762459
+- C(education)[T.Universitaria]: media posterior=-0.268372, OR aprox=0.764623
+
+Componentes de varianza aleatoria:
+- re_campaign_id: log(sd)=-1.456845, sd aprox=0.232970
+
+Interpretación sugerida: este análisis permite aproximar la existencia de heterogeneidad entre grupos (por ejemplo, segmentos o campañas) más allá de los efectos fijos observados. Dado el carácter exploratorio del estudio y la mezcla de datos observados y sintéticos, los resultados del GLMM deben interpretarse como evidencia complementaria y no confirmatoria.

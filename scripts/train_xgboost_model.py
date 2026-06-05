@@ -29,6 +29,7 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from ml.preprocessing import clean_dataset, get_feature_matrix
+from ml.evaluation import safe_brier_score, build_calibration_df, build_lift_table
 
 
 EXPORT_DIR = Path("data/exports")
@@ -188,7 +189,7 @@ def main():
         random_state=args.random_state,
         scale_pos_weight=scale_pos_weight,
         tree_method="hist",
-        device="cuda",
+        device=args.device,
         n_jobs=1,
     )
 
@@ -219,6 +220,7 @@ def main():
         "recall": float(recall_score(y_test, y_pred, zero_division=0)),
         "f1": float(f1_score(y_test, y_pred, zero_division=0)),
         "roc_auc": safe_roc_auc(y_test, y_prob),
+        "brier_score": safe_brier_score(y_test, y_prob),
         "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
     }
 
@@ -232,18 +234,24 @@ def main():
     result_df["pred_clicked_prob"] = y_prob
 
     importance_df = extract_feature_importances(preprocessor, model)
+    calibration_df = build_calibration_df(y_test, y_prob, n_bins=10)
+    lift_df = build_lift_table(y_test, y_prob, n_bins=10)
 
     metrics_path = MODEL_DIR / f"{args.output_prefix}_metrics.json"
     importance_path = MODEL_DIR / f"{args.output_prefix}_feature_importances.csv"
     pred_path = MODEL_DIR / f"{args.output_prefix}_predictions.csv"
     model_path = MODEL_DIR / f"{args.output_prefix}_model.joblib"
     preprocessor_path = MODEL_DIR / f"{args.output_prefix}_preprocessor.joblib"
+    calibration_path = MODEL_DIR / f"{args.output_prefix}_calibration.csv"
+    lift_path = MODEL_DIR / f"{args.output_prefix}_lift.csv"
 
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
 
     importance_df.to_csv(importance_path, index=False, encoding="utf-8")
     result_df.to_csv(pred_path, index=False, encoding="utf-8")
+    calibration_df.to_csv(calibration_path, index=False, encoding="utf-8")
+    lift_df.to_csv(lift_path, index=False, encoding="utf-8")
     joblib.dump(model, model_path)
     joblib.dump(preprocessor, preprocessor_path)
 
@@ -252,6 +260,8 @@ def main():
     print(f"Métricas: {metrics_path.resolve()}")
     print(f"Importancias: {importance_path.resolve()}")
     print(f"Predicciones: {pred_path.resolve()}")
+    print(f"Calibración: {calibration_path.resolve()}")
+    print(f"Lift: {lift_path.resolve()}")
     print(f"Modelo: {model_path.resolve()}")
     print(f"Preprocesador: {preprocessor_path.resolve()}")
 

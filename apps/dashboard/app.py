@@ -468,6 +468,27 @@ def load_glmm_academic_summary_text(prefix: str = "glmm_clicked_segment") -> str
         return ""
     return path.read_text(encoding="utf-8")
 
+def load_nlp_metrics(prefix: str = "nlp_distilbert_gpu") -> dict | None:
+    path = MODEL_DIR / f"{prefix}_metrics.json"
+    if not path.exists():
+        return None
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_nlp_predictions_df(prefix: str = "nlp_distilbert_gpu") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_predictions.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+def load_nlp_academic_summary_text(prefix: str = "nlp_distilbert_gpu") -> str:
+    path = MODEL_DIR / f"{prefix}_academic_summary.txt"
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
+
 def build_signal_comparison_df(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -536,6 +557,11 @@ def main():
             "Prefijo de resultados GLMM",
             value="glmm_clicked_segment",
         )
+        
+        nlp_prefix = st.sidebar.text_input(
+            "Prefijo de resultados NLP",
+            value="nlp_distilbert_gpu",
+        )
 
         analytic_df = load_selected_analytic_dataset(db, dataset_option)
 
@@ -570,6 +596,10 @@ def main():
         glmm_pred_df = load_glmm_predictions_df(prefix=glmm_prefix)
         glmm_summary_text = load_glmm_summary_text(prefix=glmm_prefix)
         glmm_academic_summary_text = load_glmm_academic_summary_text(prefix=glmm_prefix)
+
+        nlp_metrics = load_nlp_metrics(prefix=nlp_prefix)
+        nlp_pred_df = load_nlp_predictions_df(prefix=nlp_prefix)
+        nlp_academic_summary_text = load_nlp_academic_summary_text(prefix=nlp_prefix)
 
         tab1, tab2 = st.tabs(["Operativo", "Analítico"])
 
@@ -881,6 +911,48 @@ def main():
 
             st.divider()
 
+            st.subheader("Modelo NLP - DistilBERT")
+            st.caption(f"Prefijo cargado: **{nlp_prefix}**")
+
+            if nlp_metrics is None:
+                st.info(
+                    "No se encontraron resultados del modelo NLP para ese prefijo. Ejecuta por ejemplo:\n"
+                    "python -m scripts.export_nlp_dataset\n"
+                    "python -m scripts.train_nlp_model --output-prefix nlp_distilbert_gpu --epochs 4 --batch-size 16 --max-length 192\n"
+                    "python -m scripts.summarize_nlp_results --prefix nlp_distilbert_gpu"
+                )
+            else:
+                n1, n2, n3, n4, n5, n6 = st.columns(6)
+                n1.metric("Accuracy", nlp_metrics.get("accuracy"))
+                n2.metric("Precision", nlp_metrics.get("precision"))
+                n3.metric("Recall", nlp_metrics.get("recall"))
+                n4.metric("F1", nlp_metrics.get("f1"))
+                n5.metric("ROC-AUC", nlp_metrics.get("roc_auc"))
+                n6.metric("Device", nlp_metrics.get("device"))
+
+                st.markdown("#### Configuración y métricas NLP")
+                st.json(nlp_metrics)
+
+                st.markdown("#### Predicciones NLP")
+                if nlp_pred_df.empty:
+                    st.info("No hay predicciones NLP cargadas.")
+                else:
+                    st.dataframe(nlp_pred_df.head(100), use_container_width=True)
+                    st.download_button(
+                        "Descargar predicciones NLP (CSV)",
+                        dataframe_to_csv_bytes(nlp_pred_df),
+                        f"{nlp_prefix}_predictions.csv",
+                        "text/csv",
+                    )
+
+                st.markdown("#### Interpretación académica del NLP")
+                if nlp_academic_summary_text:
+                    st.text(nlp_academic_summary_text)
+                else:
+                    st.info("No hay resumen académico NLP cargado.")
+
+            st.divider()
+
             st.subheader("Comparación baseline vs XGBoost")
             if baseline_vs_xgb_df.empty:
                 st.info(
@@ -954,10 +1026,9 @@ def main():
             st.write(
                 "Esta sección permite alternar entre datos observados, sintéticos y combinados. "
                 "Además, integra resultados de análisis descriptivo, regresión logística baseline, "
-                "XGBoost, GLMM y comparación entre modelos, incluyendo métricas probabilísticas "
-                "como Brier score, calibración y lift. "
-                "El GLMM se interpreta como un análisis complementario para explorar heterogeneidad "
-                "entre grupos, por ejemplo entre segmentos o campañas."
+                "XGBoost, GLMM y un componente NLP basado en transformers. "
+                "De esta forma, el prototipo combina variables estructuradas, heterogeneidad por grupos "
+                "y representación semántica del contenido textual de los mensajes."
             )
 
     finally:

@@ -35,3 +35,8 @@ weasyprint
 xhtml2pdf
 statsmodels
 patsy
+transformers
+datasets
+accelerate
+torch
+beautifulsoup4

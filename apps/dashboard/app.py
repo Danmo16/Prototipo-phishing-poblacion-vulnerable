@@ -55,37 +55,37 @@ def extract_signal(signals: dict | None, key: str) -> int:
 # Carga de resultados - Regresión logística baseline
 # =========================
 
-def load_baseline_metrics() -> dict | None:
-    metrics_path = MODEL_DIR / "baseline_logreg_metrics.json"
+def load_baseline_metrics(prefix: str = "baseline_logreg") -> dict | None:
+    metrics_path = MODEL_DIR / f"{prefix}_metrics.json"
     if not metrics_path.exists():
         return None
     with open(metrics_path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def load_baseline_coefficients_df() -> pd.DataFrame:
-    path = MODEL_DIR / "baseline_logreg_coefficients.csv"
+def load_baseline_coefficients_df(prefix: str = "baseline_logreg") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_coefficients.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
 
 
-def load_baseline_predictions_df() -> pd.DataFrame:
-    path = MODEL_DIR / "baseline_logreg_predictions.csv"
+def load_baseline_predictions_df(prefix: str = "baseline_logreg") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_predictions.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
 
 
-def load_baseline_calibration_df() -> pd.DataFrame:
-    path = MODEL_DIR / "baseline_logreg_calibration.csv"
+def load_baseline_calibration_df(prefix: str = "baseline_logreg") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_calibration.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
 
 
-def load_baseline_lift_df() -> pd.DataFrame:
-    path = MODEL_DIR / "baseline_logreg_lift.csv"
+def load_baseline_lift_df(prefix: str = "baseline_logreg") -> pd.DataFrame:
+    path = MODEL_DIR / f"{prefix}_lift.csv"
     if not path.exists():
         return pd.DataFrame()
     return pd.read_csv(path)
@@ -413,18 +413,92 @@ def build_campaign_summary_df(df: pd.DataFrame) -> pd.DataFrame:
     grouped["report_rate_pct"] = grouped.apply(lambda r: safe_rate(r["reported"], r["delivered"]), axis=1)
     return grouped
 
-def load_baseline_vs_xgboost_df() -> pd.DataFrame:
-    path = MODEL_DIR / "baseline_vs_xgboost_comparison.csv"
-    if not path.exists():
-        return pd.DataFrame()
-    return pd.read_csv(path)
+def build_baseline_vs_xgboost_df(
+    baseline_metrics: dict | None,
+    xgboost_metrics: dict | None,
+    baseline_prefix: str,
+    xgboost_prefix: str,
+) -> pd.DataFrame:
+    """Construye la comparación con los artefactos seleccionados en la barra lateral."""
+    rows = []
+    metric_keys = [
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "roc_auc",
+        "brier_score",
+        "n_rows",
+        "train_rows",
+        "test_rows",
+        "positive_cases_total",
+    ]
+
+    if baseline_metrics:
+        row = {"model": baseline_prefix, "model_type": "baseline_logreg"}
+        row.update({key: baseline_metrics.get(key) for key in metric_keys})
+        row["dataset_path"] = baseline_metrics.get("dataset_path")
+        rows.append(row)
+
+    if xgboost_metrics:
+        row = {"model": xgboost_prefix, "model_type": "xgboost"}
+        row.update({key: xgboost_metrics.get(key) for key in metric_keys})
+        row["dataset_path"] = xgboost_metrics.get("dataset_path")
+        rows.append(row)
+
+    return pd.DataFrame(rows)
 
 
-def load_baseline_vs_xgboost_summary() -> str:
-    path = MODEL_DIR / "baseline_vs_xgboost_summary.txt"
-    if not path.exists():
+def build_baseline_vs_xgboost_summary(comparison_df: pd.DataFrame) -> str:
+    """Genera una interpretación breve y advierte si la comparación no es equivalente."""
+    if comparison_df.empty or len(comparison_df) < 2:
         return ""
-    return path.read_text(encoding="utf-8")
+
+    baseline = comparison_df.iloc[0]
+    xgboost = comparison_df.iloc[1]
+    lines = [
+        "Comparación dinámica entre regresión logística baseline y XGBoost",
+        "=" * 64,
+        "",
+    ]
+
+    same_rows = baseline.get("n_rows") == xgboost.get("n_rows")
+    same_train = baseline.get("train_rows") == xgboost.get("train_rows")
+    same_test = baseline.get("test_rows") == xgboost.get("test_rows")
+
+    if same_rows and same_train and same_test:
+        lines.append(
+            "Los dos modelos reportan el mismo número de filas y la misma distribución "
+            "de entrenamiento/prueba. Esto permite una comparación más consistente, "
+            "siempre que ambos scripts hayan utilizado la misma semilla y los mismos índices."
+        )
+    else:
+        lines.append(
+            "ADVERTENCIA: los modelos no reportan el mismo tamaño de dataset o la misma "
+            "división de entrenamiento/prueba. La comparación es descriptiva y no debe "
+            "presentarse como un contraste experimental equivalente."
+        )
+
+    lines.append("")
+    for metric in ["accuracy", "precision", "recall", "f1", "roc_auc", "brier_score"]:
+        baseline_value = baseline.get(metric)
+        xgboost_value = xgboost.get(metric)
+        lines.append(
+            f"- {metric}: baseline={baseline_value} | XGBoost={xgboost_value}"
+        )
+
+    if pd.notna(baseline.get("brier_score")) and pd.notna(xgboost.get("brier_score")):
+        better_brier = (
+            baseline.get("model")
+            if baseline.get("brier_score") < xgboost.get("brier_score")
+            else xgboost.get("model")
+        )
+        lines.extend([
+            "",
+            f"El menor Brier score corresponde a {better_brier}; en esta métrica, un valor menor es mejor.",
+        ])
+
+    return "\n".join(lines)
 
 def load_glmm_metrics(prefix: str = "glmm_clicked_segment") -> dict | None:
     path = MODEL_DIR / f"{prefix}_metrics.json"
@@ -548,9 +622,18 @@ def main():
             index=3,
         )
 
+        baseline_prefix = st.sidebar.text_input(
+            "Prefijo de resultados baseline",
+            value="baseline_logreg_combined",
+            help=(
+                "Debe coincidir con el prefijo usado en --output-prefix al entrenar "
+                "la regresión logística."
+            ),
+        )
+
         xgb_prefix = st.sidebar.text_input(
             "Prefijo de resultados XGBoost",
-            value="xgboost",
+            value="xgboost_combined",
         )
 
         glmm_prefix = st.sidebar.text_input(
@@ -570,25 +653,32 @@ def main():
         campaign_df = build_campaign_summary_df(analytic_df)
         signal_df = build_signal_comparison_df(analytic_df)
 
-        baseline_metrics = load_baseline_metrics()
-        baseline_coef_df = load_baseline_coefficients_df()
-        baseline_pred_df = load_baseline_predictions_df()
-        baseline_calibration_df = load_baseline_calibration_df()
-        baseline_lift_df = load_baseline_lift_df()
+        baseline_metrics = load_baseline_metrics(prefix=baseline_prefix)
+        baseline_coef_df = load_baseline_coefficients_df(prefix=baseline_prefix)
+        baseline_pred_df = load_baseline_predictions_df(prefix=baseline_prefix)
+        baseline_calibration_df = load_baseline_calibration_df(prefix=baseline_prefix)
+        baseline_lift_df = load_baseline_lift_df(prefix=baseline_prefix)
 
         comparison_df = load_model_comparison_df()
         comparison_logreg_coef_df = load_logreg_coefficients_comparison_df()
         tree_imp_df = load_tree_importances_df()
         comparison_pred_df = load_model_predictions_comparison_df()
 
-        baseline_vs_xgb_df = load_baseline_vs_xgboost_df()
-        baseline_vs_xgb_summary = load_baseline_vs_xgboost_summary()
-
         xgb_metrics = load_xgboost_metrics(prefix=xgb_prefix)
         xgb_importance_df = load_xgboost_importances_df(prefix=xgb_prefix)
         xgb_pred_df = load_xgboost_predictions_df(prefix=xgb_prefix)
         xgb_calibration_df = load_xgboost_calibration_df(prefix=xgb_prefix)
         xgb_lift_df = load_xgboost_lift_df(prefix=xgb_prefix)
+
+        baseline_vs_xgb_df = build_baseline_vs_xgboost_df(
+            baseline_metrics=baseline_metrics,
+            xgboost_metrics=xgb_metrics,
+            baseline_prefix=baseline_prefix,
+            xgboost_prefix=xgb_prefix,
+        )
+        baseline_vs_xgb_summary = build_baseline_vs_xgboost_summary(
+            baseline_vs_xgb_df
+        )
 
         glmm_metrics = load_glmm_metrics(prefix=glmm_prefix)
         glmm_fixed_df = load_glmm_fixed_effects_df(prefix=glmm_prefix)
@@ -707,10 +797,12 @@ def main():
             st.divider()
 
             st.subheader("Modelo baseline - Regresión logística")
+            st.caption(f"Prefijo cargado: **{baseline_prefix}**")
             if baseline_metrics is None:
                 st.info(
-                    "No se encontraron resultados de regresión logística baseline. "
-                    "Ejecuta: python -m scripts.train_baseline_model"
+                    "No se encontraron resultados de regresión logística para ese prefijo. "
+                    "Entrena el modelo con el dataset combinado y usa el mismo valor de "
+                    "--output-prefix que aparece en la barra lateral."
                 )
             else:
                 b1, b2, b3, b4, b5, b6 = st.columns(6)
@@ -729,7 +821,7 @@ def main():
                     st.download_button(
                         "Descargar coeficientes baseline (CSV)",
                         dataframe_to_csv_bytes(baseline_coef_df),
-                        "baseline_logreg_coefficients.csv",
+                        f"{baseline_prefix}_coefficients.csv",
                         "text/csv",
                     )
 
@@ -741,7 +833,7 @@ def main():
                     st.download_button(
                         "Descargar predicciones baseline (CSV)",
                         dataframe_to_csv_bytes(baseline_pred_df),
-                        "baseline_logreg_predictions.csv",
+                        f"{baseline_prefix}_predictions.csv",
                         "text/csv",
                     )
 
@@ -753,7 +845,7 @@ def main():
                     st.download_button(
                         "Descargar calibración baseline (CSV)",
                         dataframe_to_csv_bytes(baseline_calibration_df),
-                        "baseline_logreg_calibration.csv",
+                        f"{baseline_prefix}_calibration.csv",
                         "text/csv",
                     )
 
@@ -765,7 +857,7 @@ def main():
                     st.download_button(
                         "Descargar lift baseline (CSV)",
                         dataframe_to_csv_bytes(baseline_lift_df),
-                        "baseline_logreg_lift.csv",
+                        f"{baseline_prefix}_lift.csv",
                         "text/csv",
                     )
 
@@ -954,18 +1046,20 @@ def main():
             st.divider()
 
             st.subheader("Comparación baseline vs XGBoost")
-            if baseline_vs_xgb_df.empty:
+            st.caption(
+                f"Comparación cargada dinámicamente: **{baseline_prefix}** vs **{xgb_prefix}**"
+            )
+            if len(baseline_vs_xgb_df) < 2:
                 st.info(
-                    "No se encontró la comparación baseline vs XGBoost. Ejecuta:\n"
-                    "python -m scripts.compare_baseline_vs_xgboost --xgb-prefix xgboost_combined\n"
-                    "python -m scripts.summarize_baseline_vs_xgboost --xgb-prefix xgboost_combined"
+                    "Para construir la comparación deben existir los archivos de métricas "
+                    "de ambos prefijos seleccionados."
                 )
             else:
                 st.dataframe(baseline_vs_xgb_df, use_container_width=True)
                 st.download_button(
                     "Descargar comparación baseline vs XGBoost (CSV)",
                     dataframe_to_csv_bytes(baseline_vs_xgb_df),
-                    "baseline_vs_xgboost_comparison.csv",
+                    f"{baseline_prefix}_vs_{xgb_prefix}_comparison.csv",
                     "text/csv",
                 )
 

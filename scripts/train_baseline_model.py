@@ -1,199 +1,456 @@
-# scripts/train_baseline_model.py
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-
+import argparse
 import json
-import joblib
-import pandas as pd
+from pathlib import Path
+from typing import Any
 
+import joblib
+import numpy as np
+import pandas as pd
+from sklearn.calibration import calibration_curve
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
+    brier_score_loss,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
-    confusion_matrix,
 )
 from sklearn.model_selection import train_test_split
-
-from ml.preprocessing import clean_dataset, get_feature_matrix
-from ml.evaluation import safe_brier_score, build_calibration_df, build_lift_table
-
-
-EXPORT_DIR = Path("data/exports")
-MODEL_DIR = Path("data/models")
-MODEL_DIR.mkdir(parents=True, exist_ok=True)
-
-DATASET_PATH = EXPORT_DIR / "analytic_dataset.csv"
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
 
 
-def safe_roc_auc(y_true, y_prob) -> float | None:
-    try:
-        return float(roc_auc_score(y_true, y_prob))
-    except Exception:
-        return None
+TARGET_COLUMN = "clicked_flag"
+
+NUMERIC_FEATURES = [
+    "signal_urgency",
+    "signal_authority",
+    "signal_reward",
+    "signal_personalization",
+]
+
+CATEGORICAL_FEATURES = [
+    "age_bracket",
+    "gender",
+    "education",
+]
+
+FEATURE_COLUMNS = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
 
-def main():
-    if not DATASET_PATH.exists():
-        raise FileNotFoundError(
-            f"No existe {DATASET_PATH}. Ejecuta primero: python -m scripts.export_dataset"
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Entrena una regresión logística baseline sobre el "
+            "dataset analítico combinado."
+        )
+    )
+
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        default=Path("data/exports/analytic_dataset_combined.csv"),
+        help="Ruta del dataset combinado.",
+    )
+
+    parser.add_argument(
+        "--output-prefix",
+        type=str,
+        default="baseline_logreg_combined",
+        help="Prefijo para los artefactos de salida.",
+    )
+
+    parser.add_argument(
+        "--test-size",
+        type=float,
+        default=0.30,
+        help="Proporción destinada al conjunto de prueba.",
+    )
+
+    parser.add_argument(
+        "--random-state",
+        type=int,
+        default=42,
+        help="Semilla utilizada para dividir los datos.",
+    )
+
+    parser.add_argument(
+        "--class-weight",
+        choices=["balanced", "none"],
+        default="balanced",
+        help="Tratamiento del desbalance de clases.",
+    )
+
+    return parser.parse_args()
+
+
+def convert_target(series: pd.Series) -> pd.Series:
+    """Convierte la variable objetivo a valores enteros 0 y 1."""
+
+    if pd.api.types.is_bool_dtype(series):
+        return series.astype(int)
+
+    if pd.api.types.is_numeric_dtype(series):
+        return pd.to_numeric(series, errors="coerce").astype("Int64")
+
+    normalized = series.astype(str).str.strip().str.lower()
+
+    mapping = {
+        "true": 1,
+        "false": 0,
+        "yes": 1,
+        "no": 0,
+        "sí": 1,
+        "si": 1,
+        "1": 1,
+        "0": 0,
+    }
+
+    return normalized.map(mapping).astype("Int64")
+
+
+def validate_dataset(dataframe: pd.DataFrame) -> None:
+    required_columns = set(FEATURE_COLUMNS + [TARGET_COLUMN])
+    missing_columns = sorted(required_columns - set(dataframe.columns))
+
+    if missing_columns:
+        raise ValueError(
+            "El dataset no contiene todas las columnas requeridas. "
+            f"Faltan: {missing_columns}"
         )
 
-    df = pd.read_csv(DATASET_PATH)
-    df = clean_dataset(df)
 
-    X, y = get_feature_matrix(df)
+def safe_roc_auc(y_true: pd.Series, probabilities: np.ndarray) -> float | None:
+    if y_true.nunique() < 2:
+        return None
 
-    numeric_features = [
-        "signal_urgency",
-        "signal_authority",
-        "signal_reward",
-        "signal_personalization",
-    ]
-    categorical_features = [
-        "age_bracket",
-        "gender",
-        "education",
-    ]
+    return float(roc_auc_score(y_true, probabilities))
 
-    numeric_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("scaler", StandardScaler()),
-        ]
+
+def to_serializable(value: Any) -> Any:
+    if isinstance(value, (np.integer,)):
+        return int(value)
+
+    if isinstance(value, (np.floating,)):
+        return float(value)
+
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+
+    return value
+
+
+def main() -> None:
+    args = parse_arguments()
+
+    if not args.dataset.exists():
+        raise FileNotFoundError(
+            f"No se encontró el dataset: {args.dataset.resolve()}"
+        )
+
+    dataframe = pd.read_csv(args.dataset)
+    validate_dataset(dataframe)
+
+    # Conserva un identificador para relacionar predicciones con las filas.
+    dataframe = dataframe.reset_index(drop=False).rename(
+        columns={"index": "dataset_row_id"}
     )
 
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-        ]
+    dataframe[TARGET_COLUMN] = convert_target(dataframe[TARGET_COLUMN])
+    dataframe = dataframe.dropna(subset=[TARGET_COLUMN]).copy()
+    dataframe[TARGET_COLUMN] = dataframe[TARGET_COLUMN].astype(int)
+
+    # Normalización mínima de variables.
+    for column in NUMERIC_FEATURES:
+        dataframe[column] = (
+            pd.to_numeric(dataframe[column], errors="coerce")
+            .fillna(0)
+            .astype(float)
+        )
+
+    for column in CATEGORICAL_FEATURES:
+        dataframe[column] = (
+            dataframe[column]
+            .fillna("unknown")
+            .astype(str)
+            .str.strip()
+        )
+
+    if dataframe[TARGET_COLUMN].nunique() < 2:
+        raise ValueError(
+            "La variable clicked_flag debe contener las clases 0 y 1."
+        )
+
+    X = dataframe[FEATURE_COLUMNS]
+    y = dataframe[TARGET_COLUMN]
+
+    # División estratificada.
+    train_indices, test_indices = train_test_split(
+        np.arange(len(dataframe)),
+        test_size=args.test_size,
+        random_state=args.random_state,
+        stratify=y,
     )
+
+    X_train = X.iloc[train_indices]
+    X_test = X.iloc[test_indices]
+    y_train = y.iloc[train_indices]
+    y_test = y.iloc[test_indices]
 
     preprocessor = ColumnTransformer(
         transformers=[
-            ("num", numeric_transformer, numeric_features),
-            ("cat", categorical_transformer, categorical_features),
-        ]
+            (
+                "num",
+                "passthrough",
+                NUMERIC_FEATURES,
+            ),
+            (
+                "cat",
+                OneHotEncoder(
+                    handle_unknown="ignore",
+                    sparse_output=True,
+                ),
+                CATEGORICAL_FEATURES,
+            ),
+        ],
+        remainder="drop",
     )
 
-    model = LogisticRegression(
-        max_iter=1000,
-        class_weight="balanced",
-        random_state=42,
+    class_weight = (
+        "balanced"
+        if args.class_weight == "balanced"
+        else None
+    )
+
+    classifier = LogisticRegression(
+        solver="liblinear",
+        max_iter=2000,
+        class_weight=class_weight,
+        random_state=args.random_state,
     )
 
     pipeline = Pipeline(
         steps=[
             ("preprocessor", preprocessor),
-            ("model", model),
+            ("classifier", classifier),
         ]
     )
 
-    if len(df) < 10 or y.nunique() < 2:
-        pipeline.fit(X, y)
-        y_pred = pipeline.predict(X)
-        y_prob = pipeline.predict_proba(X)[:, 1]
+    pipeline.fit(X_train, y_train)
 
-        metrics = {
-            "mode": "train_only_small_sample",
-            "n_rows": int(len(df)),
-            "clicked_positive_cases": int(y.sum()),
-            "accuracy": float(accuracy_score(y, y_pred)),
-            "precision": float(precision_score(y, y_pred, zero_division=0)),
-            "recall": float(recall_score(y, y_pred, zero_division=0)),
-            "f1": float(f1_score(y, y_pred, zero_division=0)),
-            "roc_auc": safe_roc_auc(y, y_prob),
-            "brier_score": safe_brier_score(y, y_prob),
-            "confusion_matrix": confusion_matrix(y, y_pred).tolist(),
-        }
+    predicted_class = pipeline.predict(X_test)
+    predicted_probability = pipeline.predict_proba(X_test)[:, 1]
 
-        result_df = df.copy()
-        result_df["pred_clicked_flag"] = y_pred
-        result_df["pred_clicked_prob"] = y_prob
+    matrix = confusion_matrix(
+        y_test,
+        predicted_class,
+        labels=[0, 1],
+    )
 
-        calibration_df = build_calibration_df(y, y_prob, n_bins=5)
-        lift_df = build_lift_table(y, y_prob, n_bins=5)
+    metrics = {
+        "model": "baseline_logistic_regression",
+        "dataset_path": str(args.dataset.resolve()),
+        "output_prefix": args.output_prefix,
+        "target": TARGET_COLUMN,
+        "features": FEATURE_COLUMNS,
+        "class_weight": args.class_weight,
+        "random_state": args.random_state,
+        "test_size": args.test_size,
+        "n_rows": int(len(dataframe)),
+        "train_rows": int(len(train_indices)),
+        "test_rows": int(len(test_indices)),
+        "positive_cases_total": int(y.sum()),
+        "positive_cases_train": int(y_train.sum()),
+        "positive_cases_test": int(y_test.sum()),
+        "accuracy": float(
+            accuracy_score(y_test, predicted_class)
+        ),
+        "precision": float(
+            precision_score(
+                y_test,
+                predicted_class,
+                zero_division=0,
+            )
+        ),
+        "recall": float(
+            recall_score(
+                y_test,
+                predicted_class,
+                zero_division=0,
+            )
+        ),
+        "f1": float(
+            f1_score(
+                y_test,
+                predicted_class,
+                zero_division=0,
+            )
+        ),
+        "roc_auc": safe_roc_auc(
+            y_test,
+            predicted_probability,
+        ),
+        "brier_score": float(
+            brier_score_loss(
+                y_test,
+                predicted_probability,
+            )
+        ),
+        "confusion_matrix": {
+            "true_negative": int(matrix[0, 0]),
+            "false_positive": int(matrix[0, 1]),
+            "false_negative": int(matrix[1, 0]),
+            "true_positive": int(matrix[1, 1]),
+        },
+    }
 
-    else:
-        X_train, X_test, y_train, y_test, df_train, df_test = train_test_split(
-            X, y, df, test_size=0.3, random_state=42, stratify=y
+    output_directory = Path("data/models")
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    metrics_path = (
+        output_directory
+        / f"{args.output_prefix}_metrics.json"
+    )
+
+    predictions_path = (
+        output_directory
+        / f"{args.output_prefix}_predictions.csv"
+    )
+
+    coefficients_path = (
+        output_directory
+        / f"{args.output_prefix}_coefficients.csv"
+    )
+
+    calibration_path = (
+        output_directory
+        / f"{args.output_prefix}_calibration.csv"
+    )
+
+    model_path = (
+        output_directory
+        / f"{args.output_prefix}_model.joblib"
+    )
+
+    split_path = (
+        output_directory
+        / f"{args.output_prefix}_split.csv"
+    )
+
+    # Guardar métricas.
+    with metrics_path.open("w", encoding="utf-8") as file:
+        json.dump(
+            metrics,
+            file,
+            indent=2,
+            ensure_ascii=False,
+            default=to_serializable,
         )
 
-        pipeline.fit(X_train, y_train)
+    # Guardar predicciones con columnas de contexto disponibles.
+    context_columns = [
+        column
+        for column in [
+            "dataset_row_id",
+            "source",
+            "campaign_id",
+            "template_id",
+            "segment_id",
+            "target_id",
+            "age_bracket",
+            "gender",
+            "education",
+        ]
+        if column in dataframe.columns
+    ]
 
-        y_pred = pipeline.predict(X_test)
-        y_prob = pipeline.predict_proba(X_test)[:, 1]
+    predictions = dataframe.iloc[test_indices][context_columns].copy()
+    predictions["clicked_flag"] = y_test.to_numpy()
+    predictions["baseline_pred_clicked_flag"] = predicted_class
+    predictions["baseline_pred_probability"] = predicted_probability
+    predictions.to_csv(predictions_path, index=False)
 
-        metrics = {
-            "mode": "train_test_split",
-            "n_rows": int(len(df)),
-            "train_rows": int(len(X_train)),
-            "test_rows": int(len(X_test)),
-            "clicked_positive_cases_total": int(y.sum()),
-            "clicked_positive_cases_test": int(y_test.sum()),
-            "accuracy": float(accuracy_score(y_test, y_pred)),
-            "precision": float(precision_score(y_test, y_pred, zero_division=0)),
-            "recall": float(recall_score(y_test, y_pred, zero_division=0)),
-            "f1": float(f1_score(y_test, y_pred, zero_division=0)),
-            "roc_auc": safe_roc_auc(y_test, y_prob),
-            "brier_score": safe_brier_score(y_test, y_prob),
-            "confusion_matrix": confusion_matrix(y_test, y_pred).tolist(),
-        }
+    # Guardar coeficientes.
+    feature_names = (
+        pipeline.named_steps["preprocessor"]
+        .get_feature_names_out()
+    )
 
-        result_df = df_test.copy()
-        result_df["pred_clicked_flag"] = y_pred
-        result_df["pred_clicked_prob"] = y_prob
+    coefficients = pipeline.named_steps[
+        "classifier"
+    ].coef_[0]
 
-        calibration_df = build_calibration_df(y_test, y_prob, n_bins=10)
-        lift_df = build_lift_table(y_test, y_prob, n_bins=10)
-
-    fitted_preprocessor = pipeline.named_steps["preprocessor"]
-    fitted_model = pipeline.named_steps["model"]
-
-    feature_names = fitted_preprocessor.get_feature_names_out()
-    coef_df = pd.DataFrame(
+    coefficients_dataframe = pd.DataFrame(
         {
             "feature": feature_names,
-            "coefficient": fitted_model.coef_[0],
-            "abs_coefficient": abs(fitted_model.coef_[0]),
+            "coefficient": coefficients,
+            "abs_coefficient": np.abs(coefficients),
         }
-    ).sort_values("abs_coefficient", ascending=False)
+    ).sort_values(
+        by="abs_coefficient",
+        ascending=False,
+    )
 
-    metrics_path = MODEL_DIR / "baseline_logreg_metrics.json"
-    coef_path = MODEL_DIR / "baseline_logreg_coefficients.csv"
-    pred_path = MODEL_DIR / "baseline_logreg_predictions.csv"
-    model_path = MODEL_DIR / "baseline_logreg_pipeline.joblib"
-    calibration_path = MODEL_DIR / "baseline_logreg_calibration.csv"
-    lift_path = MODEL_DIR / "baseline_logreg_lift.csv"
+    coefficients_dataframe.to_csv(
+        coefficients_path,
+        index=False,
+    )
 
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=2, ensure_ascii=False)
+    # Guardar curva de calibración.
+    probability_true, probability_predicted = calibration_curve(
+        y_test,
+        predicted_probability,
+        n_bins=10,
+        strategy="quantile",
+    )
 
-    coef_df.to_csv(coef_path, index=False, encoding="utf-8")
-    result_df.to_csv(pred_path, index=False, encoding="utf-8")
-    calibration_df.to_csv(calibration_path, index=False, encoding="utf-8")
-    lift_df.to_csv(lift_path, index=False, encoding="utf-8")
+    calibration_dataframe = pd.DataFrame(
+        {
+            "mean_predicted_probability": probability_predicted,
+            "fraction_of_positives": probability_true,
+        }
+    )
+
+    calibration_dataframe.to_csv(
+        calibration_path,
+        index=False,
+    )
+
+    # Guardar asignación de filas a train/test.
+    split_dataframe = dataframe[
+        ["dataset_row_id"]
+        + (["source"] if "source" in dataframe.columns else [])
+    ].copy()
+
+    split_dataframe["split"] = "unused"
+    split_dataframe.loc[train_indices, "split"] = "train"
+    split_dataframe.loc[test_indices, "split"] = "test"
+    split_dataframe.to_csv(split_path, index=False)
+
+    # Guardar pipeline completo.
     joblib.dump(pipeline, model_path)
 
-    print("Modelo baseline entrenado/exportado correctamente.")
-    print(f"Métricas: {metrics_path.resolve()}")
-    print(f"Coeficientes: {coef_path.resolve()}")
-    print(f"Predicciones: {pred_path.resolve()}")
-    print(f"Calibración: {calibration_path.resolve()}")
-    print(f"Lift: {lift_path.resolve()}")
-    print(f"Modelo: {model_path.resolve()}")
+    print("Entrenamiento completado correctamente.")
+    print(f"Dataset: {args.dataset}")
+    print(f"Filas totales: {len(dataframe)}")
+    print(f"Entrenamiento: {len(train_indices)}")
+    print(f"Prueba: {len(test_indices)}")
+    print(f"Casos positivos: {int(y.sum())}")
+    print(f"Accuracy: {metrics['accuracy']:.4f}")
+    print(f"Precision: {metrics['precision']:.4f}")
+    print(f"Recall: {metrics['recall']:.4f}")
+    print(f"F1: {metrics['f1']:.4f}")
+    print(f"ROC-AUC: {metrics['roc_auc']}")
+    print(f"Brier score: {metrics['brier_score']:.4f}")
+    print(f"Métricas guardadas en: {metrics_path}")
+    print(f"Predicciones guardadas en: {predictions_path}")
+    print(f"Coeficientes guardados en: {coefficients_path}")
+    print(f"Modelo guardado en: {model_path}")
 
 
 if __name__ == "__main__":

@@ -24,6 +24,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    latest_versioned_or_legacy,
+)
+
 
 TARGET_COLUMN = "clicked_flag"
 
@@ -54,8 +59,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=Path("data/exports/analytic_dataset_combined.csv"),
-        help="Ruta del dataset combinado.",
+        default=None,
+        help=("Ruta del dataset combinado. Si no se especifica, "
+              "se utiliza automáticamente la versión más reciente."
+             ),
     )
 
     parser.add_argument(
@@ -148,6 +155,20 @@ def to_serializable(value: Any) -> Any:
 def main() -> None:
     args = parse_arguments()
 
+    export_directory = Path("data/exports")
+
+    if args.dataset is None:
+        args.dataset = latest_versioned_or_legacy(
+            export_directory,
+            "analytic_dataset_combined_*.csv",
+            "analytic_dataset_combined.csv",
+        )
+
+    if args.dataset is None:
+        raise FileNotFoundError(
+            "No se encontró ningún dataset combinado."
+        )
+
     if not args.dataset.exists():
         raise FileNotFoundError(
             f"No se encontró el dataset: {args.dataset.resolve()}"
@@ -155,6 +176,8 @@ def main() -> None:
 
     dataframe = pd.read_csv(args.dataset)
     validate_dataset(dataframe)
+    run_id = build_timestamp()
+    run_prefix = f"{args.output_prefix}_{run_id}"
 
     # Conserva un identificador para relacionar predicciones con las filas.
     dataframe = dataframe.reset_index(drop=False).rename(
@@ -256,6 +279,8 @@ def main() -> None:
         "model": "baseline_logistic_regression",
         "dataset_path": str(args.dataset.resolve()),
         "output_prefix": args.output_prefix,
+        "run_id": run_id,
+        "artifact_prefix": run_prefix,
         "target": TARGET_COLUMN,
         "features": FEATURE_COLUMNS,
         "class_weight": args.class_weight,
@@ -314,33 +339,35 @@ def main() -> None:
 
     metrics_path = (
         output_directory
-        / f"{args.output_prefix}_metrics.json"
+        / f"{run_prefix}_metrics.json"
     )
 
     predictions_path = (
         output_directory
-        / f"{args.output_prefix}_predictions.csv"
+        / f"{run_prefix}_predictions.csv"
     )
 
     coefficients_path = (
         output_directory
-        / f"{args.output_prefix}_coefficients.csv"
+        / f"{run_prefix}_coefficients.csv"
     )
 
     calibration_path = (
         output_directory
-        / f"{args.output_prefix}_calibration.csv"
+        / f"{run_prefix}_calibration.csv"
     )
 
     model_path = (
         output_directory
-        / f"{args.output_prefix}_model.joblib"
+        / f"{run_prefix}_model.joblib"
     )
 
     split_path = (
         output_directory
-        / f"{args.output_prefix}_split.csv"
+        / f"{run_prefix}_split.csv"
     )
+
+    print(f"Prefijo de ejecución: {run_prefix}")
 
     # Guardar métricas.
     with metrics_path.open("w", encoding="utf-8") as file:

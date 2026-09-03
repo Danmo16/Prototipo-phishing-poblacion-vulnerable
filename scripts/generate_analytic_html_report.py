@@ -5,13 +5,16 @@ import json
 from pathlib import Path
 import pandas as pd
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    build_artifact_name,
+)
+
 
 EXPORT_DIR = Path("data/exports")
 MODEL_DIR = Path("data/models")
 REPORT_DIR = Path("data/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
-OUTPUT_PATH = REPORT_DIR / "analytic_report.html"
 
 
 def load_csv(path: Path) -> pd.DataFrame:
@@ -251,8 +254,21 @@ def build_html() -> str:
 
 def main():
     html = build_html()
-    OUTPUT_PATH.write_text(html, encoding="utf-8")
-    print(f"Reporte HTML exportado en: {OUTPUT_PATH.resolve()}")
+
+    timestamp = build_timestamp()
+
+    output_path = REPORT_DIR / build_artifact_name(
+        artifact="analytic_report",
+        timestamp=timestamp,
+        extension="html",
+    )
+
+    output_path.write_text(
+        html,
+        encoding="utf-8",
+    )
+
+    print(f"Reporte HTML exportado en: {output_path.resolve()}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,16 @@
+Resumen académico del modelo NLP
+======================================================================
+
+Modelo base: distilbert-base-uncased
+Dataset utilizado: C:\Users\USUARIO\Desktop\Prototipo Phishing\data\exports\nlp_dataset_20260902_231810.csv
+Observaciones totales: 36
+Observaciones de entrenamiento: 25
+Observaciones de prueba: 11
+Casos positivos totales: 4
+Accuracy: 0.9090909090909091
+Precision: 0.0
+Recall: 0.0
+F1-score: 0.0
+ROC-AUC: 0.5
+
+Interpretación sugerida: el componente NLP introduce una representación semántica del contenido textual del mensaje, permitiendo complementar el análisis basado en señales estructuradas y variables demográficas.

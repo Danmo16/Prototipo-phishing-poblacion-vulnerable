@@ -15,6 +15,11 @@ from sqlalchemy.orm import Session
 from core.db.session import SessionLocal
 from core.domain.models import Campaign, Event, Target, Template, Segment
 
+from scripts.artifact_utils import (
+    latest_versioned_or_legacy,
+    latest_model_run_prefix,
+)
+
 
 st.set_page_config(
     page_title="Phishing Prototype Dashboard",
@@ -326,15 +331,50 @@ def load_csv_dataset(path: Path) -> pd.DataFrame:
     return df
 
 
-def load_selected_analytic_dataset(db: Session, dataset_option: str) -> pd.DataFrame:
+def load_selected_analytic_dataset(
+    db: Session,
+    dataset_option: str,
+) -> pd.DataFrame:
+
     if dataset_option == "Observado (desde BD)":
         return load_analytic_dataset_from_db(db)
+
     if dataset_option == "Observado (CSV exportado)":
-        return load_csv_dataset(EXPORT_DIR / "analytic_dataset.csv")
+        path = latest_versioned_or_legacy(
+            EXPORT_DIR,
+            "analytic_dataset_observed_*.csv",
+            "analytic_dataset.csv",
+        )
+
+        if path is None:
+            return pd.DataFrame()
+
+        return load_csv_dataset(path)
+
     if dataset_option == "Sintético":
-        return load_csv_dataset(EXPORT_DIR / "analytic_dataset_synthetic.csv")
+        path = latest_versioned_or_legacy(
+            EXPORT_DIR,
+            "analytic_dataset_synthetic_*.csv",
+            "analytic_dataset_synthetic.csv",
+        )
+
+        if path is None:
+            return pd.DataFrame()
+
+        return load_csv_dataset(path)
+
     if dataset_option == "Combinado":
-        return load_csv_dataset(EXPORT_DIR / "analytic_dataset_combined.csv")
+        path = latest_versioned_or_legacy(
+            EXPORT_DIR,
+            "analytic_dataset_combined_*.csv",
+            "analytic_dataset_combined.csv",
+        )
+
+        if path is None:
+            return pd.DataFrame()
+
+        return load_csv_dataset(path)
+
     return pd.DataFrame()
 
 
@@ -646,6 +686,26 @@ def main():
             value="nlp_distilbert_gpu",
         )
 
+        baseline_run_prefix = latest_model_run_prefix(
+            MODEL_DIR,
+            baseline_prefix,
+        )
+
+        xgb_run_prefix = latest_model_run_prefix(
+            MODEL_DIR,
+            xgb_prefix,
+        )
+
+        glmm_run_prefix = latest_model_run_prefix(
+            MODEL_DIR,
+            glmm_prefix,
+        )
+
+        nlp_run_prefix = latest_model_run_prefix(
+            MODEL_DIR,
+            nlp_prefix,
+        )
+
         analytic_df = load_selected_analytic_dataset(db, dataset_option)
 
         descriptive_general_df = build_general_descriptive_df(analytic_df)
@@ -653,22 +713,36 @@ def main():
         campaign_df = build_campaign_summary_df(analytic_df)
         signal_df = build_signal_comparison_df(analytic_df)
 
-        baseline_metrics = load_baseline_metrics(prefix=baseline_prefix)
-        baseline_coef_df = load_baseline_coefficients_df(prefix=baseline_prefix)
-        baseline_pred_df = load_baseline_predictions_df(prefix=baseline_prefix)
-        baseline_calibration_df = load_baseline_calibration_df(prefix=baseline_prefix)
-        baseline_lift_df = load_baseline_lift_df(prefix=baseline_prefix)
+        baseline_metrics = load_baseline_metrics(
+            prefix=baseline_run_prefix
+        )
+
+        baseline_coef_df = load_baseline_coefficients_df(
+            prefix=baseline_run_prefix
+        )
+
+        baseline_pred_df = load_baseline_predictions_df(
+            prefix=baseline_run_prefix
+        )
+
+        baseline_calibration_df = load_baseline_calibration_df(
+            prefix=baseline_run_prefix
+        )
+
+        baseline_lift_df = load_baseline_lift_df(
+            prefix=baseline_run_prefix
+        )
 
         comparison_df = load_model_comparison_df()
         comparison_logreg_coef_df = load_logreg_coefficients_comparison_df()
         tree_imp_df = load_tree_importances_df()
         comparison_pred_df = load_model_predictions_comparison_df()
 
-        xgb_metrics = load_xgboost_metrics(prefix=xgb_prefix)
-        xgb_importance_df = load_xgboost_importances_df(prefix=xgb_prefix)
-        xgb_pred_df = load_xgboost_predictions_df(prefix=xgb_prefix)
-        xgb_calibration_df = load_xgboost_calibration_df(prefix=xgb_prefix)
-        xgb_lift_df = load_xgboost_lift_df(prefix=xgb_prefix)
+        xgb_metrics = load_xgboost_metrics(prefix=xgb_run_prefix)
+        xgb_importance_df = load_xgboost_importances_df(prefix=xgb_run_prefix)
+        xgb_pred_df = load_xgboost_predictions_df(prefix=xgb_run_prefix)
+        xgb_calibration_df = load_xgboost_calibration_df(prefix=xgb_run_prefix)
+        xgb_lift_df = load_xgboost_lift_df(prefix=xgb_run_prefix)
 
         baseline_vs_xgb_df = build_baseline_vs_xgboost_df(
             baseline_metrics=baseline_metrics,
@@ -680,16 +754,16 @@ def main():
             baseline_vs_xgb_df
         )
 
-        glmm_metrics = load_glmm_metrics(prefix=glmm_prefix)
-        glmm_fixed_df = load_glmm_fixed_effects_df(prefix=glmm_prefix)
-        glmm_vc_df = load_glmm_variance_components_df(prefix=glmm_prefix)
-        glmm_pred_df = load_glmm_predictions_df(prefix=glmm_prefix)
-        glmm_summary_text = load_glmm_summary_text(prefix=glmm_prefix)
-        glmm_academic_summary_text = load_glmm_academic_summary_text(prefix=glmm_prefix)
+        glmm_metrics = load_glmm_metrics(prefix=glmm_run_prefix)
+        glmm_fixed_df = load_glmm_fixed_effects_df(prefix=glmm_run_prefix)
+        glmm_vc_df = load_glmm_variance_components_df(prefix=glmm_run_prefix)
+        glmm_pred_df = load_glmm_predictions_df(prefix=glmm_run_prefix)
+        glmm_summary_text = load_glmm_summary_text(prefix=glmm_run_prefix)
+        glmm_academic_summary_text = load_glmm_academic_summary_text(prefix=glmm_run_prefix)
 
-        nlp_metrics = load_nlp_metrics(prefix=nlp_prefix)
-        nlp_pred_df = load_nlp_predictions_df(prefix=nlp_prefix)
-        nlp_academic_summary_text = load_nlp_academic_summary_text(prefix=nlp_prefix)
+        nlp_metrics = load_nlp_metrics(prefix=nlp_run_prefix)
+        nlp_pred_df = load_nlp_predictions_df(prefix=nlp_run_prefix)
+        nlp_academic_summary_text = load_nlp_academic_summary_text(prefix=nlp_run_prefix)
 
         tab1, tab2 = st.tabs(["Operativo", "Analítico"])
 

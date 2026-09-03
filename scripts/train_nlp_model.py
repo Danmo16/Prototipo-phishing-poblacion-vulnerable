@@ -27,6 +27,10 @@ from transformers import (
     EarlyStoppingCallback,
 )
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    latest_versioned_or_legacy,
+)
 
 EXPORT_DIR = Path("data/exports")
 MODEL_DIR = Path("data/models")
@@ -38,7 +42,7 @@ DEFAULT_MODEL_NAME = "distilbert-base-uncased"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Entrena un modelo NLP basado en DistilBERT usando GPU.")
-    parser.add_argument("--dataset", type=str, default=str(DEFAULT_DATASET_PATH))
+    parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--output-prefix", type=str, default="nlp_distilbert_gpu")
     parser.add_argument("--model-name", type=str, default=DEFAULT_MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=4)
@@ -79,8 +83,26 @@ def compute_metrics(eval_pred):
 def main():
     args = parse_args()
 
+    if args.dataset is None:
+        dataset_path = latest_versioned_or_legacy(
+            EXPORT_DIR,
+            "nlp_dataset_*.csv",
+            "nlp_dataset.csv",
+        )
+
+        if dataset_path is None:
+            raise FileNotFoundError(
+                "No se encontró ningún dataset NLP."
+            )
+    else:
+        dataset_path = Path(args.dataset)
+
+    run_id = build_timestamp()
+    run_prefix = f"{args.output_prefix}_{run_id}"
+
+    print(f"Dataset: {dataset_path}")
+
     print("=== Entrenamiento NLP en GPU ===")
-    print(f"Dataset: {args.dataset}")
     print(f"Modelo base: {args.model_name}")
     print(f"PyTorch: {torch.__version__}")
     print(f"CUDA disponible: {torch.cuda.is_available()}")
@@ -93,7 +115,7 @@ def main():
 
     print(f"GPU detectada: {torch.cuda.get_device_name(0)}")
 
-    dataset_path = Path(args.dataset)
+
     if not dataset_path.exists():
         raise FileNotFoundError(
             f"No existe {dataset_path}. Ejecuta primero: python -m scripts.export_nlp_dataset"
@@ -144,7 +166,7 @@ def main():
         num_labels=2,
     )
 
-    output_dir = MODEL_DIR / f"{args.output_prefix}_hf"
+    output_dir = MODEL_DIR / f"{run_prefix}_hf"
 
     training_args = TrainingArguments(
         output_dir=str(output_dir),
@@ -193,6 +215,8 @@ def main():
         "device": "cuda",
         "dataset_path": str(dataset_path.resolve()),
         "output_prefix": args.output_prefix,
+        "run_id": run_id,
+        "artifact_prefix": run_prefix,
         "n_rows": int(len(df)),
         "train_rows": int(len(train_df)),
         "test_rows": int(len(test_df)),
@@ -204,9 +228,11 @@ def main():
         "roc_auc": eval_metrics.get("eval_roc_auc"),
     }
 
-    metrics_path = MODEL_DIR / f"{args.output_prefix}_metrics.json"
-    pred_path = MODEL_DIR / f"{args.output_prefix}_predictions.csv"
-    model_path = MODEL_DIR / f"{args.output_prefix}_saved_model"
+    metrics_path = MODEL_DIR / f"{run_prefix}_metrics.json"
+    pred_path = MODEL_DIR / f"{run_prefix}_predictions.csv"
+    model_path = MODEL_DIR / f"{run_prefix}_saved_model"
+
+    print(f"Prefijo de ejecución: {run_prefix}")
 
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)

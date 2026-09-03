@@ -11,14 +11,18 @@ import math
 import random
 import pandas as pd
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    build_artifact_name,
+)
+
 
 EXPORT_DIR = Path("data/exports")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-OUTPUT_PATH = EXPORT_DIR / "analytic_dataset_synthetic.csv"
 
-
-random.seed(42)
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
 
 
 def sigmoid(x: float) -> float:
@@ -267,9 +271,24 @@ def main():
             campaign_id += 1
 
     df = pd.DataFrame(rows)
-    df.to_csv(OUTPUT_PATH, index=False, encoding="utf-8")
 
-    print(f"Dataset sintético exportado en: {OUTPUT_PATH.resolve()}")
+    timestamp = build_timestamp()
+
+    output_path = EXPORT_DIR / build_artifact_name(
+        artifact="analytic_dataset_synthetic",
+        context=f"seed{RANDOM_SEED}",
+        timestamp=timestamp,
+        extension="csv",
+    )
+
+    df.to_csv(
+        output_path,
+        index=False,
+        encoding="utf-8",
+    )
+
+    print(f"Dataset sintético exportado en: {output_path.resolve()}")
+    print(f"Semilla utilizada: {RANDOM_SEED}")
     print(f"Filas: {len(df)}")
     print("Distribución clicked_flag:")
     print(df["clicked_flag"].value_counts(dropna=False))

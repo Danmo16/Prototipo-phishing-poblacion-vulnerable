@@ -16,6 +16,11 @@ from sqlalchemy import func
 from core.db.session import SessionLocal
 from core.domain.models import Campaign, Event, Segment, Target, Template
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    build_artifact_name,
+)
+
 
 EXPORT_DIR = Path("data/exports")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -86,8 +91,18 @@ def main():
     try:
         df = build_dataset(db)
 
-        csv_path = EXPORT_DIR / "nlp_dataset.csv"
-        parquet_path = EXPORT_DIR / "nlp_dataset.parquet"
+        timestamp = build_timestamp()
+
+        csv_path = EXPORT_DIR / build_artifact_name(
+            artifact="nlp_dataset",
+            timestamp=timestamp,
+            extension="csv",
+        )
+        parquet_path = EXPORT_DIR / build_artifact_name(
+            artifact="nlp_dataset",
+            timestamp=timestamp,
+            extension="parquet",
+        )
 
         df.to_csv(csv_path, index=False, encoding="utf-8")
         df.to_parquet(parquet_path, index=False)

@@ -14,6 +14,10 @@ from sqlalchemy import func
 from core.db.session import SessionLocal
 from core.domain.models import Campaign, Event, Segment, Target, Template
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    build_artifact_name,
+)
 
 EXPORT_DIR = Path("data/exports")
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -114,18 +118,69 @@ def build_dataset(db: Session) -> pd.DataFrame:
 
 def main():
     db = SessionLocal()
+
     try:
         dataset = build_dataset(db)
 
-        csv_path = EXPORT_DIR / "analytic_dataset.csv"
-        parquet_path = EXPORT_DIR / "analytic_dataset.parquet"
+        timestamp = build_timestamp()
 
-        dataset.to_csv(csv_path, index=False, encoding="utf-8")
-        dataset.to_parquet(parquet_path, index=False)
+        # Identificar las campañas incluidas en la exportación.
+        campaign_ids = []
+
+        if (
+            not dataset.empty
+            and "campaign_id" in dataset.columns
+        ):
+            campaign_ids = sorted(
+                dataset["campaign_id"]
+                .dropna()
+                .astype(int)
+                .unique()
+                .tolist()
+            )
+
+        if len(campaign_ids) == 1:
+            context = f"campaign-{campaign_ids[0]}"
+
+        elif len(campaign_ids) > 1:
+            context = (
+                f"campaigns-{campaign_ids[0]}-"
+                f"{campaign_ids[-1]}-n{len(campaign_ids)}"
+            )
+
+        else:
+            context = "no-campaigns"
+
+        csv_path = EXPORT_DIR / build_artifact_name(
+            artifact="analytic_dataset_observed",
+            context=context,
+            timestamp=timestamp,
+            extension="csv",
+        )
+
+        parquet_path = EXPORT_DIR / build_artifact_name(
+            artifact="analytic_dataset_observed",
+            context=context,
+            timestamp=timestamp,
+            extension="parquet",
+        )
+
+        dataset.to_csv(
+            csv_path,
+            index=False,
+            encoding="utf-8",
+        )
+
+        dataset.to_parquet(
+            parquet_path,
+            index=False,
+        )
 
         print(f"Dataset exportado a CSV: {csv_path.resolve()}")
         print(f"Dataset exportado a Parquet: {parquet_path.resolve()}")
+        print(f"Campañas incluidas: {campaign_ids}")
         print(f"Filas exportadas: {len(dataset)}")
+
     finally:
         db.close()
 

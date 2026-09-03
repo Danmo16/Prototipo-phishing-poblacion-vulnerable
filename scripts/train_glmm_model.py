@@ -15,6 +15,11 @@ import statsmodels.api as sm
 
 from ml.preprocessing import clean_dataset
 
+from scripts.artifact_utils import (
+    build_timestamp,
+    latest_versioned_or_legacy,
+)
+
 
 EXPORT_DIR = Path("data/exports")
 MODEL_DIR = Path("data/models")
@@ -30,7 +35,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dataset",
         type=str,
-        default=str(DEFAULT_DATASET_PATH),
+        default=None,
         help="Ruta al dataset CSV a utilizar.",
     )
     parser.add_argument(
@@ -147,9 +152,22 @@ def extract_variance_components(result) -> pd.DataFrame:
 def main():
     args = parse_args()
 
-    dataset_path = Path(args.dataset)
-    if not dataset_path.exists():
-        raise FileNotFoundError(f"No existe {dataset_path}")
+    if args.dataset is None:
+        dataset_path = latest_versioned_or_legacy(
+            EXPORT_DIR,
+            "analytic_dataset_combined_*.csv",
+            "analytic_dataset_combined.csv",
+        )
+
+        if dataset_path is None:
+            raise FileNotFoundError(
+                "No se encontró ningún dataset combinado."
+            )
+    else:
+        dataset_path = Path(args.dataset)
+
+    run_id = build_timestamp()
+    run_prefix = f"{args.output_prefix}_{run_id}"
 
     raw_df = pd.read_csv(dataset_path)
     df = prepare_dataset(raw_df, random_effect=args.random_effect)
@@ -187,6 +205,8 @@ def main():
         "model": "glmm_binomial",
         "dataset_path": str(dataset_path.resolve()),
         "output_prefix": args.output_prefix,
+        "run_id": run_id,
+        "artifact_prefix": run_prefix,
         "random_effect": args.random_effect,
         "method": args.method,
         "n_rows": int(len(df)),
@@ -195,11 +215,13 @@ def main():
         "vc_formulas": vc_formulas,
     }
 
-    metrics_path = MODEL_DIR / f"{args.output_prefix}_metrics.json"
-    fixed_path = MODEL_DIR / f"{args.output_prefix}_fixed_effects.csv"
-    vc_path = MODEL_DIR / f"{args.output_prefix}_variance_components.csv"
-    pred_path = MODEL_DIR / f"{args.output_prefix}_predictions.csv"
-    summary_path = MODEL_DIR / f"{args.output_prefix}_summary.txt"
+    metrics_path = MODEL_DIR / f"{run_prefix}_metrics.json"
+    fixed_path = MODEL_DIR / f"{run_prefix}_fixed_effects.csv"
+    vc_path = MODEL_DIR / f"{run_prefix}_variance_components.csv"
+    pred_path = MODEL_DIR / f"{run_prefix}_predictions.csv"
+    summary_path = MODEL_DIR / f"{run_prefix}_summary.txt"
+
+    print(f"Prefijo de ejecución: {run_prefix}")
 
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)

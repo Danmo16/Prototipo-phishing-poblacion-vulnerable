@@ -9,12 +9,13 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from xhtml2pdf import pisa
 
+from scripts.artifact_utils import (
+    latest_versioned_or_legacy,
+)
+
 
 REPORT_DIR = Path("data/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
-HTML_PATH = REPORT_DIR / "analytic_report.html"
-PDF_PATH = REPORT_DIR / "analytic_report.pdf"
 
 
 def convert_html_to_pdf(source_html: str, output_path: Path) -> bool:
@@ -24,18 +25,37 @@ def convert_html_to_pdf(source_html: str, output_path: Path) -> bool:
 
 
 def main():
-    if not HTML_PATH.exists():
+    html_path = latest_versioned_or_legacy(
+        REPORT_DIR,
+        "analytic_report_*.html",
+        "analytic_report.html",
+    )
+
+    if html_path is None:
         raise FileNotFoundError(
-            f"No existe {HTML_PATH}. Ejecuta primero: python -m scripts.generate_analytic_html_report"
+            "No se encontró ningún reporte HTML. "
+            "Ejecuta primero: "
+            "python -m scripts.generate_analytic_html_report"
         )
 
-    html_content = HTML_PATH.read_text(encoding="utf-8")
+    pdf_path = html_path.with_suffix(".pdf")
 
-    ok = convert_html_to_pdf(html_content, PDF_PATH)
-    if not ok or not PDF_PATH.exists():
-        raise RuntimeError("Falló la conversión de HTML a PDF.")
+    html_content = html_path.read_text(
+        encoding="utf-8"
+    )
 
-    print(f"Reporte PDF exportado en: {PDF_PATH.resolve()}")
+    ok = convert_html_to_pdf(
+        html_content,
+        pdf_path,
+    )
+
+    if not ok or not pdf_path.exists():
+        raise RuntimeError(
+            "Falló la conversión de HTML a PDF."
+        )
+
+    print(f"HTML utilizado: {html_path.resolve()}")
+    print(f"Reporte PDF exportado en: {pdf_path.resolve()}")
 
 
 if __name__ == "__main__":

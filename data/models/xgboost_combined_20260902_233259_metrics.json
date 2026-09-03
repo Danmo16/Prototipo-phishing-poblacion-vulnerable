@@ -1,0 +1,35 @@
+{
+  "model": "xgboost",
+  "dataset_path": "C:\\Users\\USUARIO\\Desktop\\Prototipo Phishing\\data\\exports\\analytic_dataset_combined_20260902_231646.csv",
+  "output_prefix": "xgboost_combined",
+  "run_id": "20260902_233259",
+  "artifact_prefix": "xgboost_combined_20260902_233259",
+  "device": "cuda",
+  "n_rows": 2436,
+  "train_rows": 1705,
+  "test_rows": 731,
+  "positive_cases_total": 146,
+  "positive_cases_train": 102,
+  "positive_cases_test": 44,
+  "scale_pos_weight": 15.715686274509803,
+  "accuracy": 0.6839945280437757,
+  "precision": 0.08071748878923767,
+  "recall": 0.4090909090909091,
+  "f1": 0.1348314606741573,
+  "roc_auc": 0.6004035993118961,
+  "brier_score": 0.22752841606411348,
+  "confusion_matrix": [
+    [
+      482,
+      205
+    ],
+    [
+      26,
+      18
+    ]
+  ],
+  "test_source_distribution": {
+    "synthetic": 721,
+    "observed": 10
+  }
+}

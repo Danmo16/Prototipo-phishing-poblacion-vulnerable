@@ -16,6 +16,8 @@ from core.db.session import SessionLocal
 from core.domain.models import Campaign, Event, Target, Template, Segment
 
 from scripts.artifact_utils import (
+    build_timestamp,
+    build_artifact_name,
     latest_versioned_or_legacy,
     latest_model_run_prefix,
 )
@@ -54,6 +56,39 @@ def extract_signal(signals: dict | None, key: str) -> int:
         return 0
     value = signals.get(key, 0)
     return 1 if value in [1, True, "1", "true", "True"] else 0
+
+def get_dataset_context(dataset_option: str) -> str:
+    contexts = {
+        "Observado (desde BD)": "observed-db",
+        "Observado (CSV exportado)": "observed",
+        "Sintético": "synthetic",
+        "Combinado": "combined",
+    }
+
+    return contexts.get(dataset_option, "unknown")
+
+def get_campaign_context(campaign_df: pd.DataFrame) -> str:
+    if campaign_df.empty or "campaign_id" not in campaign_df.columns:
+        return "no-campaigns"
+
+    campaign_ids = sorted(
+        campaign_df["campaign_id"]
+        .dropna()
+        .astype(int)
+        .unique()
+        .tolist()
+    )
+
+    if len(campaign_ids) == 1:
+        return f"campaign-{campaign_ids[0]}"
+
+    if len(campaign_ids) > 1:
+        return (
+            f"campaigns-{campaign_ids[0]}-"
+            f"{campaign_ids[-1]}-n{len(campaign_ids)}"
+        )
+
+    return "no-campaigns"
 
 
 # =========================
@@ -713,6 +748,53 @@ def main():
         campaign_df = build_campaign_summary_df(analytic_df)
         signal_df = build_signal_comparison_df(analytic_df)
 
+        export_timestamp = build_timestamp()
+
+        dataset_context = get_dataset_context(dataset_option)
+        campaign_context = get_campaign_context(campaign_df)
+
+        export_context = f"{dataset_context}-{campaign_context}"
+
+
+        selected_dataset_filename = build_artifact_name(
+            artifact="analytic_dataset_selected",
+            context=export_context,
+            timestamp=export_timestamp,
+            extension="csv",
+        )
+
+
+        descriptive_general_filename = build_artifact_name(
+            artifact="descriptive_general",
+            context=export_context,
+            timestamp=export_timestamp,
+            extension="csv",
+        )
+
+
+        campaign_summary_filename = build_artifact_name(
+            artifact="campaign_analytic_summary",
+            context=export_context,
+            timestamp=export_timestamp,
+            extension="csv",
+        )
+
+
+        demographic_summary_filename = build_artifact_name(
+            artifact="demographic_summary",
+            context=export_context,
+            timestamp=export_timestamp,
+            extension="csv",
+        )
+
+
+        signal_comparison_filename = build_artifact_name(
+            artifact="signal_comparison",
+            context=export_context,
+            timestamp=export_timestamp,
+            extension="csv",
+        )
+
         baseline_metrics = load_baseline_metrics(
             prefix=baseline_run_prefix
         )
@@ -797,7 +879,7 @@ def main():
                 st.download_button(
                     "Descargar dataset analítico seleccionado (CSV)",
                     dataframe_to_csv_bytes(analytic_df),
-                    "analytic_dataset_selected.csv",
+                    selected_dataset_filename,
                     "text/csv",
                 )
 
@@ -822,7 +904,7 @@ def main():
                 st.download_button(
                     "Descargar tabla descriptiva general (CSV)",
                     dataframe_to_csv_bytes(descriptive_general_df),
-                    "descriptive_general_table_dashboard.csv",
+                    descriptive_general_filename,
                     "text/csv",
                 )
 
@@ -836,7 +918,7 @@ def main():
                 st.download_button(
                     "Descargar resumen por campaña (CSV)",
                     dataframe_to_csv_bytes(campaign_df),
-                    "campaign_analytic_summary.csv",
+                    campaign_summary_filename,
                     "text/csv",
                 )
 
@@ -850,7 +932,7 @@ def main():
                 st.download_button(
                     "Descargar resumen demográfico (CSV)",
                     dataframe_to_csv_bytes(demographic_df),
-                    "demographic_summary.csv",
+                    demographic_summary_filename,
                     "text/csv",
                 )
 

@@ -1,0 +1,5 @@
+scenario,comparison,group_a,group_a_rate_pct,group_b,group_b_rate_pct,difference_pp,expected_pattern
+Control,Apertura: personalización vs sin personalización,Con personalización,31.56,Sin personalización,33.33,-1.78,Sin diferencia deliberada
+Personalización,Apertura: personalización vs sin personalización,Con personalización,49.78,Sin personalización,24.8,24.98,Mayor apertura con personalización
+Segmento,Clic: segmento experimental vs otros segmentos,Segmento experimental,13.33,Otros segmentos,4.79,8.54,Mayor clic en segmento experimental
+Interacción,Efecto diferencial de personalización por segmento,Efecto personalización en segmento experimental,28.89,Efecto personalización en otros segmentos,12.78,16.11,Mayor efecto de personalización en segmento experimental

@@ -42,11 +42,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: soulconfusion16@gmail.com
-      SMTP_PASSWORD: zsxw sfob rfmm bndw
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
       SMTP_USE_TLS: "true"
       SMTP_USE_SSL: "false"
-      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_EMAIL: ""
       SMTP_FROM_NAME: "Simulación Académica"
       DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
@@ -75,11 +75,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: soulconfusion16@gmail.com
-      SMTP_PASSWORD: zsxw sfob rfmm bndw
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
       SMTP_USE_TLS: "true"
       SMTP_USE_SSL: "false"
-      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_EMAIL: ""
       SMTP_FROM_NAME: "Simulación Académica"
       DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
@@ -112,11 +112,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: soulconfusion16@gmail.com
-      SMTP_PASSWORD: zsxw sfob rfmm bndw
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
       SMTP_USE_TLS: "true"
       SMTP_USE_SSL: "false"
-      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_EMAIL: ""
       SMTP_FROM_NAME: "Simulación Académica"
       DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
@@ -145,11 +145,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: soulconfusion16@gmail.com
-      SMTP_PASSWORD: zsxw sfob rfmm bndw
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
       SMTP_USE_TLS: "true"
       SMTP_USE_SSL: "false"
-      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_EMAIL: ""
       SMTP_FROM_NAME: "Simulación Académica"
       DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
@@ -182,11 +182,11 @@ services:
       DATABASE_URL: postgresql+psycopg2://phishing_user:phishing_pass@postgres:5432/phishing
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
-      SMTP_USERNAME: soulconfusion16@gmail.com
-      SMTP_PASSWORD: zsxw sfob rfmm bndw
+      SMTP_USERNAME: 
+      SMTP_PASSWORD: 
       SMTP_USE_TLS: "true"
       SMTP_USE_SSL: "false"
-      SMTP_FROM_EMAIL: "soulconfusion16@gmail.com"
+      SMTP_FROM_EMAIL: ""
       SMTP_FROM_NAME: "Simulación Académica"
       DELIVERY_MODE: "smtp"
       REDIS_URL: redis://redis:6379/0
